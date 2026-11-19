@@ -1,9 +1,14 @@
 Nusa — Dynamic Island for your desktop
-Copyright (c) 2026 Quraish Rahmatulloh. All rights reserved.
+Copyright (c) 2026 Quraish Rahmatulloh
 
-This is personal software, provided as is, without warranty of any kind.
+The Nusa source code is released under the MIT License:
+https://github.com/Hiroyki/nusa/blob/main/LICENSE
 
-Nusa includes third-party content:
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+Nusa includes third-party content, which keeps its own license:
 - Quran text: Tanzil Project (tanzil.net). The text is unmodified.
 - Indonesian translation: Ministry of Religious Affairs of Indonesia, via Tanzil.
 - English translation: Saheeh International, via Tanzil.
@@ -11,4 +16,5 @@ Nusa includes third-party content:
 - Fonts: Scheherazade New (SIL International) and Amiri Quran (Khaled Hosny),
   SIL Open Font License 1.1.
 - Weather data: Open-Meteo (open-meteo.com), CC BY 4.0.
+- Location names: BigDataCloud reverse geocoding; IP fallback by ipwho.is.
 - Quran recitation audio is streamed from cdn.islamic.network.

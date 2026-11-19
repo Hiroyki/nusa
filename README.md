@@ -137,9 +137,15 @@ safety limits in [`desktop/themes/`](desktop/themes/README.md).
 <details open>
 <summary><b>🪟 Windows 10/11 (64-bit)</b></summary>
 
-Download **`Nusa-Setup-x.y.z.exe`** from [Releases](https://github.com/Hiroyki/nusa/releases/latest) and run the wizard.
+Two builds, both per-user (no admin needed):
 
-> See *"Windows protected your PC"*? Click **More info → Run anyway** — the installer isn't code-signed yet.
+- **Installer** — `Nusa-Setup-x.y.z.exe`. Run the wizard and **choose where it installs**.
+- **Portable** — `Nusa-x.y.z-portable.exe`. Drop it anywhere (another drive, a USB stick, a folder of your
+  choice) and run it — nothing gets installed.
+
+Grab either from [Releases](https://github.com/Hiroyki/nusa/releases/latest).
+
+> See *"Windows protected your PC"*? Click **More info → Run anyway** — the builds aren't code-signed yet.
 
 </details>
 

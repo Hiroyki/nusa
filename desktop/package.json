@@ -11,7 +11,8 @@
     "assets": "node scripts/assets.js",
     "start": "npm run assets && electron .",
     "test": "node test/run.js",
-    "dist:win": "npm run assets && electron-builder --win nsis --x64",
+    "dist:win": "npm run assets && electron-builder --win nsis portable --x64",
+    "dist:win:portable": "npm run assets && electron-builder --win portable --x64",
     "dist:linux": "npm run assets && electron-builder --linux AppImage deb --x64",
     "dist:mac": "npm run assets && electron-builder --mac dmg zip --x64 --arm64"
   },
@@ -37,8 +38,14 @@
       "build/tray.png"
     ],
     "win": {
-      "target": "nsis",
+      "target": [
+        "nsis",
+        "portable"
+      ],
       "icon": "build/icon.png"
+    },
+    "portable": {
+      "artifactName": "Nusa-${version}-portable.${ext}"
     },
     "nsis": {
       "oneClick": false,

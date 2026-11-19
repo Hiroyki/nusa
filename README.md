@@ -1,26 +1,31 @@
 <div align="center">
 
-<img src="docs/logo.png" width="132" alt="Nusa logo">
+<img src="docs/banner.png" width="100%" alt="Nusa — Dynamic Island for your desktop">
 
-# Nusa
-
-**The Dynamic Island for your desktop.**
+### The Dynamic Island for your desktop
 
 Music, tasks, prayer times, Quran, weather and focus — living in a notch at the top of your screen.
 Click it, and it unfolds into a full panel.
 
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-5cdba8?style=flat-square)](#-install)
 [![Latest release](https://img.shields.io/badge/release-v1.0.0-5cdba8?style=flat-square)](https://github.com/Hiroyki/nusa/releases/latest)
-[![macOS · SwiftUI](https://img.shields.io/badge/macOS-SwiftUI-000000?style=flat-square&logo=apple&logoColor=white)](#-project-structure)
-[![Desktop · Electron](https://img.shields.io/badge/desktop-Electron-47848F?style=flat-square&logo=electron&logoColor=white)](#-build-from-source)
+[![macOS · SwiftUI](https://img.shields.io/badge/macOS-SwiftUI-000000?style=flat-square&logo=apple&logoColor=white)](#-tech-stack)
+[![Desktop · Electron](https://img.shields.io/badge/desktop-Electron-47848F?style=flat-square&logo=electron&logoColor=white)](#-tech-stack)
+
 [![Themes](https://img.shields.io/badge/themes-8%20%2B%20your%20own-5cdba8?style=flat-square)](desktop/themes/README.md)
+[![Prayer times](https://img.shields.io/badge/prayer%20times-Kemenag%20criteria-5cdba8?style=flat-square)](#-features)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4?style=flat-square)](https://github.com/Hiroyki/nusa/issues)
+[![Built by Hiroyki](https://img.shields.io/badge/built%20by-Hiroyki-5cdba8?style=flat-square&logo=github&logoColor=white)](https://github.com/Hiroyki)
 
 <br>
 
 <img src="docs/demo.gif" width="720" alt="Nusa demo — expanding notch, switching tabs and changing themes">
 
 <sub><b>Expand · switch tabs · swap themes</b> — all in motion.</sub>
+
+<br><br>
+
+**[Download](#-install)** · **[Features](#-features)** · **[Themes](#-themes)** · **[Tips](#-tips--tricks)** · **[Build](#-build-from-source)** · **[FAQ](#-faq)**
 
 </div>
 
@@ -31,13 +36,18 @@ Click it, and it unfolds into a full panel.
 - [Why Nusa?](#-why-nusa)
 - [Features](#-features)
 - [Gallery](#-gallery)
-- [Install](#-install)
 - [Themes](#-themes)
+- [Install](#-install)
 - [Tips & tricks](#-tips--tricks)
+- [Tech stack](#-tech-stack)
+- [Nusa in numbers](#-nusa-in-numbers)
 - [Build from source](#-build-from-source)
 - [Project structure](#-project-structure)
 - [FAQ](#-faq)
 - [Roadmap](#-roadmap)
+- [Contributing](#-contributing)
+- [Changelog](#-changelog)
+- [Support](#-support)
 - [Credits](#-credits)
 
 ## 🤔 Why Nusa?
@@ -50,7 +60,7 @@ notch no matter which machine you're on.
 - 🖱️ **Click-through** — everything around the notch passes clicks straight to the app behind it.
 - 👀 **Glanceable** — now-playing, next prayer, weather and tasks without stealing focus.
 - 🎨 **Yours** — pick one of 8 themes or bring your own in a few seconds.
-- 🔒 **Local-first** — prayer times, tasks and settings stay on your device.
+- 🔒 **Local-first** — prayer times, tasks and settings stay on your device. No account, no telemetry.
 
 ## ✨ Features
 
@@ -81,10 +91,35 @@ notch no matter which machine you're on.
 | <img src="docs/screens/home.png" width="380"> | <img src="docs/screens/music.png" width="380"> |
 | **Tasks** | **Quran** |
 | <img src="docs/screens/tasks.png" width="380"> | <img src="docs/screens/quran.png" width="380"> |
-| **Prayer** | **Your own theme** |
+| **Prayer** | **Themes** |
 | <img src="docs/screens/prayer.png" width="380"> | <img src="docs/screens/themes.png" width="380"> |
 
 </div>
+
+## 🎨 Themes
+
+Nusa ships with **8 built-in themes** — **Classic · Midnight · Sunset · Forest · Rosé · Mono · Grape · Ocean** —
+and you can bring your own.
+
+<div align="center"><img src="docs/themes.gif" width="640" alt="Cycling through the 8 built-in themes"></div>
+
+A theme is just a small `.json` file. Import it from any of these:
+
+- ⚙️ gear icon in the panel → **Import theme…**
+- 🖱️ right-click the notch → **Import theme…**
+- 🗂️ system tray menu → **Import theme…**
+- 📥 **drop the `.json` straight onto the notch**
+
+```json
+{
+  "name": "Neon",
+  "colors": { "mint": "#39ff14", "bg": "#070b07", "late": "#ff4d6d" },
+  "font": "'Segoe UI', system-ui, sans-serif"
+}
+```
+
+Every field is optional — anything you leave out falls back to the default dark look. Switch back any time
+with **Theme → Reset to Classic**. Full format & example in [`desktop/themes/`](desktop/themes/README.md).
 
 ## 🚀 Install
 
@@ -128,31 +163,6 @@ Permissions (Calendar, Camera, Bluetooth) are only requested when a feature need
 
 </details>
 
-## 🎨 Themes
-
-Nusa ships with **8 built-in themes** — **Classic · Midnight · Sunset · Forest · Rosé · Mono · Grape · Ocean** —
-and you can bring your own.
-
-A theme is just a small `.json` file. Import it from any of these:
-
-- ⚙️ gear icon in the panel → **Import theme…**
-- 🖱️ right-click the notch → **Import theme…**
-- 🗂️ system tray menu → **Import theme…**
-- 📥 **drop the `.json` straight onto the notch**
-
-```json
-{
-  "name": "Neon",
-  "colors": { "mint": "#39ff14", "bg": "#070b07", "late": "#ff4d6d" },
-  "font": "'Segoe UI', system-ui, sans-serif"
-}
-```
-
-Every field is optional — anything you leave out falls back to the default dark look. Switch back any time
-with **Theme → Reset to Classic**. Full format & example in [`desktop/themes/`](desktop/themes/README.md).
-
-<div align="center"><img src="docs/screens/ocean.png" width="460" alt="Ocean theme"></div>
-
 ## 🕹️ Tips & tricks
 
 | Do this | And… |
@@ -169,7 +179,24 @@ with **Theme → Reset to Classic**. Full format & example in [`desktop/themes/`
 | **📹 button** (Home) | Toggles the camera mirror |
 | **Hover** the notch | Expands to show what's playing |
 
-## 🛠 Build from source
+## 🧰 Tech stack
+
+| Layer | Built with |
+|---|---|
+| Native macOS app | **Swift · SwiftUI · AppKit · EventKit · AVFoundation** |
+| Desktop app (Win/macOS/Linux) | **Electron · JavaScript · HTML · CSS** |
+| Packaging | **electron-builder** (NSIS · DMG · AppImage · DEB) |
+| Prayer times | **PrayTimes.org** algorithm with Kemenag RI criteria |
+| Weather | **[Open-Meteo](https://open-meteo.com)** |
+| Icons | Hand-drawn SVG — no icon-font dependency |
+
+## 🔢 Nusa in numbers
+
+| 🖥️ Platforms | 🎨 Themes | ✨ Features | 📖 Surahs | 🔑 Accounts |
+|:---:|:---:|:---:|:---:|:---:|
+| **3** | **8** built-in | **13** | **114** | **0** |
+
+## 🛠️ Build from source
 
 <details>
 <summary><b>macOS — native SwiftUI app</b></summary>
@@ -203,7 +230,7 @@ npm run dist:mac     # dmg + zip (Intel & Apple Silicon) -> desktop/dist/
 
 </details>
 
-## 🗂 Project structure
+## 🗂️ Project structure
 
 | Path | What's inside |
 |---|---|
@@ -211,7 +238,7 @@ npm run dist:mac     # dmg + zip (Intel & Apple Silicon) -> desktop/dist/
 | `helper/` | Now-playing reader — a dylib loaded by `/usr/bin/perl`, since macOS 15.4+ blocks MediaRemote for regular apps |
 | `desktop/` | Electron app for **Windows, macOS & Linux**, plus the theme system |
 | `assets/` | Adhan audio, Quran data, Arabic fonts — sources & licenses in [`assets/CREDITS.md`](assets/CREDITS.md) |
-| `docs/` | Demo GIF and screenshots used in this README |
+| `docs/` | Banner, demo GIFs and screenshots used in this README |
 
 ## ❓ FAQ
 
@@ -259,6 +286,35 @@ It fades out of the way when a screen-recording toolbar or a share bar appears i
 - [ ] Curated theme gallery
 - [ ] Custom prayer-time locations
 - [ ] Code-signed installers
+- [ ] Homebrew & winget packages
+
+## 🤝 Contributing
+
+Ideas, bug reports and PRs are all welcome!
+
+1. **Found a bug or have an idea?** [Open an issue](https://github.com/Hiroyki/nusa/issues).
+2. **Want to build something?** Fork the repo, make your change, run `cd desktop && npm test`, and open a PR.
+3. **Made a nice theme?** Share the `.json` in an issue — I'd love to feature it.
+
+## 📝 Changelog
+
+<details>
+<summary><b>v1.0.0 — themes, everywhere</b></summary>
+
+- 🎨 **Themes** — 8 built-in looks plus importing your own `.json` (gear menu, notch right-click, tray, or drag-and-drop onto the notch).
+- 🎛️ Themes recolor the whole island — background, accents, chips, even the font.
+- 🪟 New **Windows installer** built automatically via GitHub Actions.
+- 📖 This README — banner, animated demos, gallery, FAQ and more.
+
+</details>
+
+## 💚 Support
+
+If Nusa makes your desktop a little nicer:
+
+- ⭐ **Star this repo** — it genuinely helps.
+- 🐛 [Report a bug](https://github.com/Hiroyki/nusa/issues) or request a feature.
+- 🎨 Share a theme you made.
 
 ## 🙏 Credits
 
@@ -266,6 +322,14 @@ It fades out of the way when a screen-recording toolbar or a share bar appears i
 - **Quran text, translation & reciters** — see [`assets/CREDITS.md`](assets/CREDITS.md).
 - **Weather** — [Open-Meteo](https://open-meteo.com).
 - **Icons** — hand-drawn SVG, no icon-font dependency.
-- Built by **Quraish Rahmatulloh**.
+- Built & maintained by **[Hiroyki](https://github.com/Hiroyki)** (Quraish Rahmatulloh).
 
-<div align="center"><sub>Made with ☕ — hope it's useful. If you like it, a ⭐ helps a lot.</sub></div>
+<div align="center">
+
+---
+
+<img src="docs/logo.png" width="48" alt="Nusa">
+
+<sub>Made with ☕ — hope it's useful. If you like it, a ⭐ helps a lot.</sub>
+
+</div>

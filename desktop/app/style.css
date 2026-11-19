@@ -6,6 +6,9 @@
   --late: #ff736b;
   --rest: #ffb85a;
   --green: #33d667;
+  --bg: #000;
+  --text: #fff;
+  --appfont: system-ui, 'Segoe UI Variable Text', 'Segoe UI', Inter, Ubuntu, Cantarell, 'Noto Sans', sans-serif;
   --dim: rgba(255, 255, 255, 0.58);
   --faint: rgba(255, 255, 255, 0.4);
   --line: rgba(255, 255, 255, 0.1);
@@ -18,8 +21,8 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
 body {
-  font: 400 13px/1.35 system-ui, 'Segoe UI Variable Text', 'Segoe UI', Inter, Ubuntu, Cantarell, 'Noto Sans', sans-serif;
-  color: #fff; -webkit-font-smoothing: antialiased; user-select: none; cursor: default;
+  font: 400 13px/1.35 var(--appfont);
+  color: var(--text); -webkit-font-smoothing: antialiased; user-select: none; cursor: default;
 }
 button { font: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 input, select { font: inherit; color: #fff; }
@@ -30,7 +33,7 @@ input, select { font: inherit; color: #fff; }
 /* ---------- siluet notch: rata atas, bahu cekung, bawah membulat ---------- */
 .island {
   position: absolute; top: 0; left: 50%; translate: -50% 0;
-  width: var(--w); height: var(--h); background: #000; border-radius: 0 0 var(--r) var(--r);
+  width: var(--w); height: var(--h); background: var(--bg); border-radius: 0 0 var(--r) var(--r);
   transition: width .42s var(--spring), height .4s var(--soft) .07s, border-radius .4s var(--soft) .07s, box-shadow .3s, translate .14s var(--spring);
 }
 .island.closing { transition: width .4s var(--soft) .07s, height .36s var(--soft), border-radius .36s var(--soft), box-shadow .3s; }
@@ -38,8 +41,8 @@ input, select { font: inherit; color: #fff; }
   content: ''; position: absolute; top: 0; width: var(--s); height: var(--s);
   transition: width .4s var(--soft), height .4s var(--soft);
 }
-.island::before { left: calc(-1 * var(--s)); background: radial-gradient(circle at 0 100%, transparent calc(var(--s) - .5px), #000 var(--s)); }
-.island::after { right: calc(-1 * var(--s)); background: radial-gradient(circle at 100% 100%, transparent calc(var(--s) - .5px), #000 var(--s)); }
+.island::before { left: calc(-1 * var(--s)); background: radial-gradient(circle at 0 100%, transparent calc(var(--s) - .5px), var(--bg) var(--s)); }
+.island::after { right: calc(-1 * var(--s)); background: radial-gradient(circle at 100% 100%, transparent calc(var(--s) - .5px), var(--bg) var(--s)); }
 .island.big { box-shadow: 0 10px 26px rgba(0, 0, 0, .42); }
 .island { opacity: 1; transition-property: width, height, border-radius, box-shadow, opacity; }
 .island.yield { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
@@ -178,7 +181,7 @@ input, select { font: inherit; color: #fff; }
 .track { position: relative; height: 76px; }
 .track .ln { position: absolute; left: 26px; right: 26px; top: 36px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.1); }
 .track .ln i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: rgba(92,219,168,.85); }
-.track .dot { position: absolute; top: 38px; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: rgba(255,255,255,.35); box-shadow: 0 0 0 2px #000; }
+.track .dot { position: absolute; top: 38px; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: rgba(255,255,255,.35); box-shadow: 0 0 0 2px var(--bg); }
 .track .dot.past { background: rgba(92,219,168,.85); }
 .track .dot.next { width: 12px; height: 12px; margin: -6px 0 0 -6px; background: var(--mint); }
 .track .now { position: absolute; top: 30px; width: 2px; height: 16px; margin-left: -1px; background: #fff; }

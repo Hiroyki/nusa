@@ -1,5 +1,5 @@
 // Nusa untuk Windows & Linux: jendela transparan di tengah atas layar, isinya notch HTML.
-const { app, BrowserWindow, screen, ipcMain, clipboard, Tray, Menu, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, clipboard, Tray, Menu, nativeImage, shell, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
@@ -207,10 +207,62 @@ ipcMain.on('file-drag', async (e, p) => {
   e.sender.startDrag({ file: p, icon: icon.isEmpty() ? nativeImage.createFromPath(path.join(__dirname, 'build', 'tray.png')) : icon });
 });
 
+/* ---------- Tema: file JSON di folder userData/themes ---------- */
+// Tema = { name, colors: { mint, late, rest, green, bg, text, dim, faint, line, chip, chip2 }, font }
+// Warnanya disuntik ke CSS variable pas render; berkasnya disimpan di luar app biar aman pas update.
+const COLOR_KEYS = ['mint', 'late', 'rest', 'green', 'bg', 'text', 'dim', 'faint', 'line', 'chip', 'chip2'];
+const slug = (s) => String(s || 'theme').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'theme';
+// Nilai CSS yang boleh masuk: cuma teks warna pendek, tanpa hal berbahaya (url(), ;, {}, <>, dsb.)
+const safeValue = (v) => (typeof v === 'string' && v.trim().length > 0 && v.length <= 120 && !/[;{}<>]|url\s*\(/i.test(v) ? v.trim() : null);
+
+function normalizeTheme(raw) {
+  if (!raw || typeof raw !== 'object') return { error: 'invalid' };
+  const name = String(raw.name || '').trim().slice(0, 40);
+  if (!name) return { error: 'invalid' };
+  const colors = {};
+  for (const k of COLOR_KEYS) { const v = safeValue(raw.colors?.[k] ?? raw[k]); if (v) colors[k] = v; }
+  const font = safeValue(raw.font);
+  return { name, colors, ...(font ? { font } : {}) };
+}
+const themeDir = () => path.join(app.getPath('userData'), 'themes');
+function readTheme(file) {
+  try {
+    const t = normalizeTheme(JSON.parse(fs.readFileSync(file, 'utf8')));
+    return t.error ? null : { id: path.basename(file, '.json'), ...t };
+  } catch { return null; }
+}
+function listThemes() {
+  try { return fs.readdirSync(themeDir()).filter((f) => f.endsWith('.json')).map((f) => readTheme(path.join(themeDir(), f))).filter(Boolean); }
+  catch { return []; }
+}
+function saveTheme(t) {
+  const id = slug(t.name);
+  fs.mkdirSync(themeDir(), { recursive: true });
+  fs.writeFileSync(path.join(themeDir(), id + '.json'), JSON.stringify(t, null, 2));
+  return { ...t, id };
+}
+ipcMain.handle('themes', () => listThemes());
+ipcMain.handle('theme-import', async () => {
+  const r = await dialog.showOpenDialog(win, { title: 'Import Nusa theme', filters: [{ name: 'Nusa theme', extensions: ['json'] }], properties: ['openFile'] });
+  if (r.canceled || !r.filePaths[0]) return null;
+  const t = normalizeTheme(readTheme(r.filePaths[0]) || {});
+  return t.error ? t : saveTheme(t);
+});
+ipcMain.handle('theme-import-path', (_e, p) => {
+  if (!isFile(p) || !/\.json$/i.test(p)) return null;
+  const t = normalizeTheme(readTheme(p) || {});
+  return t.error ? t : saveTheme(t);
+});
+ipcMain.handle('theme-delete', (_e, id) => {
+  if (/^[a-z0-9-]+$/.test(String(id))) fs.rmSync(path.join(themeDir(), id + '.json'), { force: true });
+  return listThemes();
+});
+
 // Klik kanan di notch: menu kecil kayak versi Mac
 ipcMain.on('context-menu', () => {
   const atLogin = process.platform === 'linux' ? linuxAutostart() : app.getLoginItemSettings().openAtLogin;
   Menu.buildFromTemplate([
+    { label: 'Import theme…', click: () => send('theme-import') },
     { label: atLogin ? 'Don’t open at login' : 'Open at login', click: () => (process.platform === 'linux' ? linuxAutostart(!atLogin) : app.setLoginItemSettings({ openAtLogin: !atLogin })) },
     { type: 'separator' },
     { label: 'Quit Nusa', click: () => app.quit() },
@@ -243,6 +295,7 @@ function makeTray() {
     const atLogin = process.platform === 'linux' ? linuxAutostart() : app.getLoginItemSettings().openAtLogin;
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: 'Open Nusa', click: () => send('open-panel') },
+      { label: 'Import theme…', click: () => send('theme-import') },
       { label: 'Start at login', type: 'checkbox', checked: atLogin, click: (m) => {
         process.platform === 'linux' ? linuxAutostart(m.checked) : app.setLoginItemSettings({ openAtLogin: m.checked });
         rebuild();

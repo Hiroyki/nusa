@@ -26,6 +26,7 @@
     unlock: s('<rect x="5.5" y="10.5" width="13" height="10" rx="2"/><path d="M8.5 10.5V7.5a3.5 3.5 0 0 1 6.8-1.2"/>'),
     gear: s('<circle cx="12" cy="12" r="3"/><path d="M12 3v2.2M12 18.8V21M3 12h2.2M18.8 12H21M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M5.6 18.4l1.6-1.6M16.8 7.2l1.6-1.6"/>'),
     pin: s('<path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>'),
+    palette: s('<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 2-.9 2-1.9 0-.6-.3-1-.7-1.4-.4-.4-.6-.8-.6-1.3 0-1 .8-1.7 1.8-1.7h1.3a3.7 3.7 0 0 0 3.7-3.7C19.5 6.2 16.2 3.5 12 3.5z"/><circle cx="7.6" cy="11.2" r="1.05" fill="currentColor" stroke="none"/><circle cx="10" cy="7.7" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.1" cy="7.7" r="1.05" fill="currentColor" stroke="none"/>'),
     north: s('<path d="M12 3l6.5 17L12 16l-6.5 4z"/>', true),
     bookmark: s('<path d="M7 3.5h10v17l-5-3.5-5 3.5z"/>', true),
     speaker: s('<path d="M11 5L6.5 9H3.5v6h3L11 19z"/><path d="M15.5 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/>'),

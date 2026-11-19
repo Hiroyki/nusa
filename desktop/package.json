@@ -2,7 +2,8 @@
   "name": "nusa",
   "productName": "Nusa",
   "version": "1.0.0",
-  "description": "Dynamic Island for Windows & Linux",
+  "desktopName": "Nusa",
+  "description": "Dynamic Island for Windows, macOS & Linux",
   "author": "Quraish Rahmatulloh",
   "license": "UNLICENSED",
   "main": "main.js",
@@ -11,7 +12,8 @@
     "start": "npm run assets && electron .",
     "test": "node test/run.js",
     "dist:win": "npm run assets && electron-builder --win nsis --x64",
-    "dist:linux": "npm run assets && electron-builder --linux AppImage deb --x64"
+    "dist:linux": "npm run assets && electron-builder --linux AppImage deb --x64",
+    "dist:mac": "npm run assets && electron-builder --mac dmg zip --x64 --arm64"
   },
   "devDependencies": {
     "electron": "45.1.0",
@@ -54,12 +56,25 @@
       "include": "build/installer.nsh",
       "artifactName": "Nusa-Setup-${version}.${ext}"
     },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.utilities",
+      "extendInfo": {
+        "LSUIElement": true
+      },
+      "artifactName": "Nusa-${version}-${arch}.${ext}"
+    },
     "linux": {
       "target": [
         "AppImage",
         "deb"
       ],
       "icon": "build/icon.png",
+      "syncDesktopName": true,
       "category": "Utility",
       "synopsis": "Dynamic Island for your desktop",
       "maintainer": "MrColdZs <340422942+MrColdZs@users.noreply.github.com>",

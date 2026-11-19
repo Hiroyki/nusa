@@ -13,6 +13,51 @@ const clock = (sec) => { const s = Math.max(0, Math.floor(sec)); return s >= 360
 const hhmm = (d, tz) => new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', ...(tz ? { timeZone: tz } : {}) }).format(d);
 const isWin = window.nusa?.platform === 'win32';
 
+/* ================= tema ================= */
+// Tema bawaan cuma menimpa sebagian variabel warna. Tema custom diimpor dari file .json
+// (lewat dialog, atau langsung drop file-nya ke notch) dan disimpan di userData/themes.
+const THEME_KEYS = ['mint', 'late', 'rest', 'green', 'bg', 'text', 'dim', 'faint', 'line', 'chip', 'chip2'];
+const BUILTIN_THEMES = [
+  { id: 'classic', name: 'Classic', colors: {} },
+  { id: 'midnight', name: 'Midnight', colors: { mint: '#5cc8ff', green: '#3ea6ff', rest: '#8ab4ff', late: '#ff6b81', bg: '#080d18', line: 'rgba(255,255,255,.12)', chip: 'rgba(255,255,255,.1)', chip2: 'rgba(255,255,255,.18)' } },
+  { id: 'sunset', name: 'Sunset', colors: { mint: '#ffb26b', green: '#ffcf6b', rest: '#ff8f5a', late: '#ff5a7a', bg: '#150a12' } },
+  { id: 'forest', name: 'Forest', colors: { mint: '#7bd88f', green: '#4fd06e', rest: '#d8c66a', late: '#ff7a6b', bg: '#08130d' } },
+  { id: 'rose', name: 'Rosé', colors: { mint: '#ff8fb1', green: '#ff6fa5', rest: '#ffb3c7', late: '#ff5c5c', bg: '#160a10' } },
+  { id: 'mono', name: 'Mono', colors: { mint: '#e6e6e6', green: '#c9c9c9', rest: '#b0b0b0', late: '#ff7a7a', bg: '#0b0b0c' } },
+  { id: 'grape', name: 'Grape', colors: { mint: '#b98cff', green: '#9a6bff', rest: '#d0a6ff', late: '#ff6fae', bg: '#0e0a1a' } },
+  { id: 'ocean', name: 'Ocean', colors: { mint: '#4fd6c4', green: '#3fb6d8', rest: '#7fd0ff', late: '#ff7a8a', bg: '#04121a' } },
+];
+const themeById = (id) => BUILTIN_THEMES.find((t) => t.id === id) || S.customThemes.find((t) => t.id === id) || BUILTIN_THEMES[0];
+const isCustomTheme = (id) => S.customThemes.some((t) => t.id === id);
+
+/** Suntik warna tema ke CSS variable di :root. Tema "classic" = nggak nimpa apa-apa. */
+function applyTheme() {
+  const t = themeById(S.theme), root = document.documentElement.style;
+  for (const k of THEME_KEYS) root.removeProperty('--' + k);
+  root.removeProperty('--appfont');
+  for (const [k, v] of Object.entries(t.colors || {})) if (THEME_KEYS.includes(k)) root.setProperty('--' + k, v);
+  if (t.font) root.setProperty('--appfont', t.font);
+}
+
+async function loadThemes() {
+  try { S.customThemes = (await nusa.themes()) || []; } catch { S.customThemes = []; }
+  applyTheme();
+}
+
+/** Pakai tema hasil impor: simpan pilihan, pasang, kasih umpan balik. */
+async function useImportedTheme(t) {
+  if (!t) return;
+  if (t.error) return showFlash({ kind: 'themeErr' }, 3);
+  S.customThemes = await nusa.themes();
+  S.theme = t.id; LS.set('theme', t.id); applyTheme();
+  showFlash({ kind: 'theme', name: t.name }, 3);
+}
+
+/** Buka dialog pilih file tema, terus langsung pakai. Balikin tema barunya (atau null). */
+async function importTheme(path) {
+  await useImportedTheme(path ? await nusa.themeImportPath(path) : await nusa.themeImport());
+}
+
 const S = {
   hover: false, expanded: false, pinned: false, tab: LS.get('tab', 'home'), flash: null,
   media: null, tint: null, weather: null, battery: null,
@@ -24,6 +69,7 @@ const S = {
   // Samain versi Mac: volume sistem, Rak (Tray), kalender hari, cermin kamera, geser posisi lagu
   audio: null, shelf: LS.get('shelf', []), files: {}, dropping: false, calSel: null, mirror: null, scrub: null,
   cal: { status: 'loading', events: [], at: 0 },
+  theme: LS.get('theme', 'classic'), customThemes: [],
 };
 let flashTimer = null;
 
@@ -53,7 +99,7 @@ function size(p = presentation()) {
     case 'flash': {
       const k = S.flash.kind;
       if (SMALL_FLASH.includes(k)) return { w: 232, h: 24, r: 9, s: 7 };
-      const w = { track: 318, prayer: 318, task: 340, rain: 318, focusEnd: 360, charging: 300, device: 330 }[k] || 300;
+      const w = { track: 318, prayer: 318, task: 340, rain: 318, focusEnd: 360, charging: 300, device: 330, theme: 300, themeErr: 340 }[k] || 300;
       return { w, h: k === 'charging' ? 58 : 60, r: 20, s: 10 };
     }
     default: {
@@ -173,6 +219,10 @@ function flashHTML(f) {
     }
     case 'device':
       return `<span class="badge">${IC.headphones}</span><span class="txt"><b>${esc(f.name)}</b><small class="mono">${esc(f.detail)}</small></span><span style="color:var(--green);font-size:16px">${IC.check}</span>`;
+    case 'theme':
+      return `<span class="badge" style="color:var(--mint)">${IC.palette}</span><span class="txt"><b>${esc(f.name)} theme applied</b><small>Saved to your themes</small></span><span style="color:var(--green);font-size:16px">${IC.check}</span>`;
+    case 'themeErr':
+      return `<span class="badge" style="color:var(--late)">${IC.palette}</span><span class="txt"><b>Couldn’t import theme</b><small>Make sure it’s a Nusa theme .json file</small></span><span style="color:var(--late);font-size:16px">${IC.xCircle}</span>`;
     case 'volume': return `<span data-live="volFlash" style="display:contents"></span>`;
     case 'low': return smallRow(IC.battLow, 'var(--late)', 'Low battery', `${f.percent}%`, 'var(--late)');
     case 'unplug': return smallRow(IC.plug, 'var(--dim)', 'Charger removed', `${f.percent}%`, '#fff');
@@ -694,7 +744,15 @@ function menuHTML() {
   if (m.type === 'surah') body = S.q.book.surahs.map((s) => item(`${s.n}. ${s.tr} · ${s.en}`, 'surah', { n: s.n }, s.n === S.q.surah)).join('');
   if (m.type === 'q') body = `<div class="h">Arabic font</div>` + QFONTS.map((f) => item(f, 'qFont', { f }, S.q.font === f)).join('')
     + `<div class="h">Reciter</div>` + RECITERS.map(([id, n]) => item(n, 'reciter', { r: id }, LS.get('reciter', 'ar.alafasy') === id)).join('');
-  if (m.type === 'gear') body = item('Start at login', 'login', {}, m.login) + item('Quit Nusa', 'quit', {}, false);
+  if (m.type === 'theme') {
+    const list = [...BUILTIN_THEMES, ...S.customThemes.map((t) => ({ ...t, custom: true }))];
+    body = list.map((t) => item(t.custom ? `${t.name} · custom` : t.name, 'theme', { id: t.id }, t.id === S.theme)).join('')
+      + `<div class="h"></div>` + item('Import theme…', 'themeImport', {}, false)
+      + (isCustomTheme(S.theme) ? item('Remove this theme', 'themeRemove', {}, false) : '')
+      + (S.theme !== 'classic' ? item('Reset to Classic', 'themeReset', {}, false) : '');
+  }
+  if (m.type === 'gear') body = item(`Theme · ${themeById(S.theme).name}`, 'themeMenu', {}, false) + item('Import theme…', 'themeImport', {}, false)
+    + `<div class="h"></div>` + item('Start at login', 'login', {}, m.login) + item('Quit Nusa', 'quit', {}, false);
   if (m.type === 'wx' && S.weather) body = `<div class="h">${esc(S.place.name)} · ${wxLabel(S.weather.code)} · feels ${Math.round(S.weather.feels)}°</div>`
     + S.weather.hours.filter((h) => h.time > Date.now() - 1800000).map((h) => `<button>${hhmm(new Date(h.time), S.place.tz)}  ${Math.round(h.temp)}°  rain ${h.rain}%</button>`).join('') + `<div class="h">Data: Open-Meteo</div>`;
   return `<div class="menu" style="left:${m.x}px;top:${m.y}px">${body}</div>`;
@@ -707,7 +765,7 @@ function openMenu(type, el, extra = {}) {
   // Ukur tinggi dropdown yang beneran, terus panjangin panel segitu
   const el2 = $('.menu');
   if (el2) { S.menu.h = el2.offsetHeight; render(); }
-  if (type === 'surah') $('.menu .on')?.scrollIntoView({ block: 'center' });
+  if (type === 'surah' || type === 'theme') $('.menu .on')?.scrollIntoView({ block: 'center' });
 }
 
 /* ================= cuaca ================= */
@@ -830,6 +888,8 @@ nusa.on('hover', (over) => {
 });
 
 nusa.on('open-panel', () => { S.expanded = true; nusa.focus(); render(true); });
+// Impor tema dari klik-kanan notch / menu tray (dialognya jalan di proses utama)
+nusa.on('theme-import', async () => { await importTheme(); render(true); });
 window.addEventListener('blur', () => { if (S.expanded && !S.pinned && !S.menu) { S.expanded = false; render(); } });
 
 nusa.on('media', (st) => {
@@ -947,7 +1007,9 @@ document.addEventListener('drop', async (e) => {
   e.preventDefault();
   S.dropping = false;
   const paths = [...(e.dataTransfer?.files || [])].map((f) => nusa.filePath(f)).filter(Boolean);
-  for (const p of paths) await addToShelf(p);
+  // File .json = tema: impor & langsung pakai. Sisanya masuk Rak.
+  for (const p of paths.filter((x) => /\.json$/i.test(x))) await useImportedTheme(await nusa.themeImportPath(p));
+  for (const p of paths.filter((x) => !/\.json$/i.test(x))) await addToShelf(p);
   if (S.expanded) render(true);
 });
 document.addEventListener('dragstart', (e) => {
@@ -1030,6 +1092,15 @@ document.addEventListener('click', (e) => {
     gear: async () => openMenu('gear', el, { login: await nusa.loginItem() }),
     login: async () => { await nusa.loginItem(!S.menu?.login); S.menu = null; render(true); },
     quit: () => window.close(),
+    themeMenu: () => openMenu('theme', el),
+    theme: () => { S.theme = d.id; LS.set('theme', d.id); applyTheme(); S.menu = null; render(true); },
+    themeImport: async () => { await importTheme(); S.menu = null; render(true); },
+    themeRemove: async () => {
+      const id = S.theme;
+      if (isCustomTheme(id)) { S.customThemes = await nusa.themeDelete(id); S.theme = 'classic'; LS.set('theme', 'classic'); applyTheme(); }
+      S.menu = null; render(true);
+    },
+    themeReset: () => { S.theme = 'classic'; LS.set('theme', 'classic'); applyTheme(); S.menu = null; render(true); },
     timer: () => startTimer(+d.m), timerStop: () => { clearTimeout(timerDone); S.timer = null; render(true); },
     wxMenu: () => openMenu('wx', el),
     mprev: () => nusa.media('prev'), mnext: () => nusa.media('next'), mtoggle: () => nusa.media('toggle'),
@@ -1099,6 +1170,8 @@ navigator.getBattery?.().then((b) => {
   b.addEventListener('levelchange', () => { read(); render(); });
   b.addEventListener('chargingtimechange', read);
 });
+applyTheme();
+loadThemes();
 loadShelf();
 loadCalendar();
 setInterval(loadCalendar, 5 * 60000);
@@ -1111,4 +1184,4 @@ loadWeather();
 render(true);
 
 // Pengait buat tes otomatis (dipakai mode potret pas development)
-window.__nusa = { S, render, showFlash, startFocus, startTimer, recite, loadQuran };
+window.__nusa = { S, render, showFlash, startFocus, startTimer, recite, loadQuran, applyTheme, loadThemes, importTheme, BUILTIN_THEMES };

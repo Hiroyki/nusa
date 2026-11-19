@@ -85,7 +85,7 @@
       "syncDesktopName": true,
       "category": "Utility",
       "synopsis": "Dynamic Island for your desktop",
-      "maintainer": "MrColdZs <340422942+MrColdZs@users.noreply.github.com>",
+      "maintainer": "Hiroyki <340422942+Hiroyki@users.noreply.github.com>",
       "artifactName": "Nusa-${version}-${arch}.${ext}"
     },
     "deb": {

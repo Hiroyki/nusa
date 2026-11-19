@@ -1,5 +1,7 @@
 # Kredit aset
 
+> Aset di bawah ini **nggak** ikut lisensi MIT kode Nusa; masing-masing tetap pakai lisensinya sendiri.
+
 ## assets/adhan.mp3
 - Judul: "The Adhan - Muslim Call to Prayer - Aaqib Azeez"
 - Pengunggah: Atcovi (karya sendiri), 23 Desember 2020

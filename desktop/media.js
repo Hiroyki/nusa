@@ -8,6 +8,7 @@ const http = require('http');
 let emit = () => {};
 let osState = null;
 let senandung = null;
+let senQueue = null;
 
 const PS_HEAD = `
 $ErrorActionPreference = 'SilentlyContinue'
@@ -17,15 +18,42 @@ function Await($op, [Type]$t) { $task = $asTask.MakeGenericMethod($t).Invoke($nu
 [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime] | Out-Null
 $mgr = Await ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager]::RequestAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager])
 # Sesi yang ditampilin & dikontrol: yang lagi Playing dulu (Spotify, browser, apa aja), baru sesi "current" dari Windows.
-function Pick() {
+# $prefer = app yang lagi tampil di Nusa. Pas ganti lagu, statusnya sebentar "Changing"/"Opened"/"Paused";
+# tanpa ini Nusa sempat loncat ke app lain dan klik Next berikutnya nyasar ke sana.
+function Pick([string]$prefer = '') {
   $all = @($mgr.GetSessions())
+  $pref = $null
+  if ($prefer) { $pref = $all | Where-Object { $_.SourceAppUserModelId -eq $prefer } | Select-Object -First 1 }
+  if ($pref -and @('Playing', 'Changing', 'Opened') -contains [string]$pref.GetPlaybackInfo().PlaybackStatus) { return $pref }
   $on = $all | Where-Object { $_.GetPlaybackInfo().PlaybackStatus -eq 'Playing' } | Select-Object -First 1
   if ($on) { return $on }
+  if ($pref) { return $pref }
   $cur = $mgr.GetCurrentSession()
   if ($cur) { return $cur }
   return $all | Select-Object -First 1
 }
 `;
+
+// Satu PowerShell yang standby nerima perintah lewat stdin: "<perintah><TAB><app>". Dulu tiap klik bikin
+// PowerShell baru (~1 detik startup + muat WinRT), jadi klik Next berkali-kali kerasa lemot / ada yang telat.
+const PS_CMD = PS_HEAD + `
+while ($true) {
+  $line = [Console]::In.ReadLine()
+  if ($line -eq $null) { break }
+  $parts = $line.Split([char]9)
+  $cmd = $parts[0]; $src = if ($parts.Length -gt 1) { $parts[1] } else { '' }
+  try {
+    $s = Pick $src
+    if ($s) {
+      if ($cmd -like 'seek *') { Await ($s.TryChangePlaybackPositionAsync([long]$cmd.Substring(5))) ([bool]) | Out-Null }
+      elseif ($cmd -eq 'toggle') { Await ($s.TryTogglePlayPauseAsync()) ([bool]) | Out-Null }
+      elseif ($cmd -eq 'next') { Await ($s.TrySkipNextAsync()) ([bool]) | Out-Null }
+      elseif ($cmd -eq 'prev') { Await ($s.TrySkipPreviousAsync()) ([bool]) | Out-Null }
+      elseif ($cmd -eq 'pause') { Await ($s.TryPauseAsync()) ([bool]) | Out-Null }
+    }
+  } catch { }
+  [Console]::Out.WriteLine('done'); [Console]::Out.Flush()
+}`;
 
 const PS_LOOP = PS_HEAD + `
 [Windows.Storage.Streams.IRandomAccessStreamWithContentType, Windows.Storage.Streams, ContentType = WindowsRuntime] | Out-Null
@@ -34,7 +62,7 @@ $asRead = [System.IO.WindowsRuntimeStreamExtensions].GetMethod('AsStreamForRead'
 $lastKey = ''
 $lastSrc = $null; $srcPath = ''; $srcPid = 0
 while ($true) {
-  $s = Pick
+  $s = Pick $lastSrc
   $o = $null
   if ($s) {
     $p = Await ($s.TryGetMediaPropertiesAsync()) ([Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties])
@@ -145,12 +173,13 @@ function pollSenandung() {
         try {
           const s = JSON.parse(b);
           const cur = (s.queue || []).find((q) => q.i === s.idx);
+          senQueue = cur ? { queue: s.queue, idx: s.idx } : null;
           senandung = cur ? { title: cur.title, artist: cur.artist, art: cur.art ? 'http://127.0.0.1:5560' + cur.art : null,
             playing: !!s.playing, duration: cur.duration || 0, position: 0, at: Date.now(), source: 'Senandung', noTimeline: true } : null;
-        } catch { senandung = null; }
+        } catch { senandung = null; senQueue = null; }
         publish();
       });
-    }).on('error', () => { senandung = null; publish(); });
+    }).on('error', () => { senandung = null; senQueue = null; publish(); });
   }, 2000);
 }
 
@@ -170,9 +199,43 @@ function publish() {
 
 function start(cb) {
   emit = cb;
-  if (process.platform === 'win32') startWindows();
+  if (process.platform === 'win32') { startWindows(); startCmdWorker(); }
   else if (process.platform === 'linux') startLinux();
   pollSenandung();
+}
+
+/** Kirim perintah ke PowerShell standby; kalau prosesnya mati, dibikin ulang otomatis. */
+let cmdPs = null;
+function startCmdWorker() {
+  if (!cmdPs || cmdPs.killed || cmdPs.exitCode !== null || !cmdPs.stdin.writable) {
+    cmdPs = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encode(PS_CMD)], { windowsHide: true });
+    cmdPs.stdout.resume();
+    cmdPs.stdin.on('error', () => {});
+    cmdPs.on('exit', () => { cmdPs = null; });
+  }
+}
+function winCommand(cmd) {
+  startCmdWorker(); // dinyalain dari awal biar klik pertama nggak nunggu PowerShell start
+  // App yang lagi tampil di Nusa, biar perintahnya nggak nyasar ke app lain
+  const src = String(osState?.source || '').replace(/[\t\r\n]/g, '');
+  cmdPs.stdin.write(`${cmd}\t${src}\n`);
+}
+
+/** Senandung nggak lewat media sistem: next/prev = lompat ke lagu sebelah di antreannya. */
+function senandungCommand(cmd) {
+  if (!senQueue) return;
+  const { queue, idx } = senQueue;
+  const at = queue.findIndex((q) => q.i === idx);
+  let body = null;
+  if (cmd === 'next' && at >= 0 && at + 1 < queue.length) body = { cmd: 'jump', index: queue[at + 1].i };
+  else if (cmd === 'prev' && at > 0) body = { cmd: 'jump', index: queue[at - 1].i };
+  if (!body) return;
+  const data = JSON.stringify(body);
+  const req = http.request({ host: '127.0.0.1', port: 5560, path: '/api/remote/cmd', method: 'POST', timeout: 3000,
+    headers: { 'Content-Type': 'application/json', 'X-Senandung-Remote': '1', 'Content-Length': Buffer.byteLength(data) } }, (res) => res.resume());
+  req.on('error', () => {});
+  req.on('timeout', () => req.destroy());
+  req.end(data);
 }
 
 function command(cmd) {
@@ -181,18 +244,14 @@ function command(cmd) {
   if (seek) {
     const sec = +seek[1];
     if (osState) osState = { ...osState, position: sec, at: Date.now() }; // langsung kelihatan, nggak nunggu laporan berikutnya
-    if (process.platform === 'win32') {
-      const script = PS_HEAD + `$s = Pick; if ($s) { Await ($s.TryChangePlaybackPositionAsync([long]${Math.round(sec * 1e7)})) ([bool]) | Out-Null }`;
-      spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encode(script)], { windowsHide: true });
-    } else if (process.platform === 'linux') execFile('playerctl', ['position', String(sec)], () => {});
+    if (process.platform === 'win32') winCommand(`seek ${Math.round(sec * 1e7)}`);
+    else if (process.platform === 'linux') execFile('playerctl', ['position', String(sec)], () => {});
     return publish();
   }
   if (!['toggle', 'next', 'prev', 'pause'].includes(cmd)) return;
-  if (process.platform === 'win32') {
-    const call = { toggle: 'TryTogglePlayPauseAsync', next: 'TrySkipNextAsync', prev: 'TrySkipPreviousAsync', pause: 'TryPauseAsync' }[cmd];
-    const script = PS_HEAD + `$s = Pick; if ($s) { Await ($s.${call}()) ([bool]) | Out-Null }`;
-    spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encode(script)], { windowsHide: true });
-  } else if (process.platform === 'linux') {
+  if (!osState && senandung) return senandungCommand(cmd);
+  if (process.platform === 'win32') winCommand(cmd);
+  else if (process.platform === 'linux') {
     execFile('playerctl', [{ toggle: 'play-pause', next: 'next', prev: 'previous', pause: 'pause' }[cmd]], () => {});
   }
 }

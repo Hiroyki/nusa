@@ -100,37 +100,20 @@ notch no matter which machine you're on.
 
 ## 🎨 Themes
 
-Nusa ships with **8 built-in themes** — **Classic · Midnight · Sunset · Forest · Rosé · Mono · Grape · Ocean** —
-and you can bring your own.
+Nusa ships with **11 hand-picked dark themes** — switch between them instantly from the gear menu ⚙ → **Theme**.
+No files, no setup.
 
-<div align="center"><img src="docs/themes.gif" width="640" alt="Cycling through the 8 built-in themes"></div>
+| | | |
+|---|---|---|
+| 🖤 **Classic** | 🌌 **Midnight** | 🌃 **Tokyo Night** |
+| ❄️ **Nord** | 🧛 **Dracula** | 🪵 **Gruvbox** |
+| 🌹 **Rosé Pine** | 🌇 **Sunset** | 🌲 **Forest** |
+| 🌊 **Ocean** | 🩶 **Mono** | |
 
-A theme is just a small `.json` file. Import it from any of these:
+Each theme recolors the **whole island** — background, accents, chips, dividers and text. The palettes are adapted from
+the most-loved editor colour schemes (Nord, Dracula, Tokyo Night, Gruvbox, Rosé Pine) so they look great and stay readable.
 
-- ⚙️ gear icon in the panel → **Import theme…**
-- 🖱️ right-click the notch → **Import theme…**
-- 🗂️ system tray menu → **Import theme…**
-- 📥 **drop a `.json`, `.css`, `.png` or `.jpg` straight onto the notch**
-
-🖼️ **Wallpaper themes:** import a **`.png` or `.jpg`** and it becomes the island background — **sharp by default**,
-with a light scrim and text shadow so text stays readable. Tune it with `bg-dim` (darkness), or add `wall-blur` for a soft look.
-
-> 🧪 **Want a head start?** Download
-> **[`nusa-example-theme.json`](https://github.com/Hiroyki/nusa/releases/download/v1.0.0/nusa-example-theme.json)**,
-> change the colors, then import it.
-
-```json
-{
-  "name": "Neon",
-  "colors": { "mint": "#39ff14", "bg": "#070b07", "late": "#ff4d6d" },
-  "font": "'Segoe UI', system-ui, sans-serif"
-}
-```
-
-**Fully yours.** Every key under `colors` (or `vars`) becomes a CSS variable — use the built-ins or invent your own.
-You can also drop in raw CSS with the `css` field, import a **`.css` file directly**, or use a **`.png`/`.jpg`** as a
-wallpaper background (the import dialog accepts `.json`, `.css`, `.png` and `.jpg`). Switch back any time with **Theme → Reset to Classic**. Full format, examples and
-safety limits in [`desktop/themes/`](desktop/themes/README.md).
+<div align="center"><img src="docs/themes.gif" width="640" alt="Cycling through the built-in themes"></div>
 
 ## 🚀 Install
 

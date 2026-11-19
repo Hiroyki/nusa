@@ -16,12 +16,6 @@ contextBridge.exposeInMainWorld('nusa', {
   calendarSettings: () => ipcRenderer.send('calendar-settings'),
   senandung: (method, route, body) => ipcRenderer.invoke('senandung', method, route, body),
   asset: (name) => ipcRenderer.invoke('asset', name),
-  // Tema: daftar tema custom, impor dari file (dialog / path), hapus
-  themes: () => ipcRenderer.invoke('themes'),
-  themeImport: () => ipcRenderer.invoke('theme-import'),
-  themeImportPath: (p) => ipcRenderer.invoke('theme-import-path', p),
-  themeDelete: (id) => ipcRenderer.invoke('theme-delete', id),
-  themeBackground: (id) => ipcRenderer.invoke('theme-background', id),
   // Rak: path file yang di-drop (Electron baru nggak ngasih File.path lagi), info/ikon, buka, seret keluar
   filePath: (file) => { try { return webUtils.getPathForFile(file); } catch { return ''; } },
   fileInfo: (p) => ipcRenderer.invoke('file-info', p),
@@ -29,6 +23,6 @@ contextBridge.exposeInMainWorld('nusa', {
   fileShow: (p) => ipcRenderer.send('file-show', p),
   fileDrag: (p) => ipcRenderer.send('file-drag', p),
   on: (channel, fn) => {
-    if (['hover', 'media', 'clip', 'open-panel', 'audio', 'device', 'yield', 'theme-import'].includes(channel)) ipcRenderer.on(channel, (_e, v) => fn(v));
+    if (['hover', 'media', 'clip', 'open-panel', 'audio', 'device', 'yield'].includes(channel)) ipcRenderer.on(channel, (_e, v) => fn(v));
   },
 });

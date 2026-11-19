@@ -1,0 +1,76 @@
+# Build installer Windows Nusa (versi Electron, yang ada fitur tema).
+# Polanya nyontek workflow "Build Mac": tiap kode berubah di main → build → ganti asset di Release v1.0.0.
+#
+# macOS & Linux SENGAJA dimatikan dulu (lihat blok komentar di bawah). Kalau udah siap dirilis,
+# tinggal tambahin job-nya lagi — build Mac/Linux nggak bisa dari runner Windows.
+name: Build Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Install
+        working-directory: desktop
+        run: npm ci
+      - name: Test
+        working-directory: desktop
+        run: npm test
+      - name: Build installer + portable
+        working-directory: desktop
+        run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Nusa-Windows
+          path: |
+            desktop/dist/Nusa-Setup-*.exe
+            desktop/dist/Nusa-*-portable.exe
+          if-no-files-found: error
+      - name: Ganti installer Windows di Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Tag push → upload ke release tag itu; kalau nggak, ganti yang di v1.0.0 (kayak Build Mac)
+          TAG="${{ github.ref_type == 'tag' && github.ref_name || 'v1.0.0' }}"
+          gh release upload "$TAG" desktop/dist/Nusa-Setup-*.exe desktop/dist/Nusa-*-portable.exe --clobber \
+            || gh release create "$TAG" desktop/dist/Nusa-Setup-*.exe desktop/dist/Nusa-*-portable.exe --title "Nusa ${TAG#v}" --notes "Windows installer + portable."
+
+# --- macOS & Linux: disimpen dulu, aktifin kalau udah siap ---
+#
+#  linux:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-node@v4
+#        with: { node-version: 20, cache: npm, cache-dependency-path: desktop/package-lock.json }
+#      - working-directory: desktop
+#        run: npm ci
+#      - working-directory: desktop
+#        run: npm run dist:linux           # -> AppImage + .deb
+#
+#  macos:
+#    runs-on: macos-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      - uses: actions/setup-node@v4
+#        with: { node-version: 20, cache: npm, cache-dependency-path: desktop/package-lock.json }
+#      - working-directory: desktop
+#        run: npm ci
+#      - working-directory: desktop
+#        run: npm run dist:mac             # -> dmg + zip (x64 + arm64)

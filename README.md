@@ -112,8 +112,8 @@ A theme is just a small `.json` file. Import it from any of these:
 - 🗂️ system tray menu → **Import theme…**
 - 📥 **drop a `.json`, `.css`, `.png` or `.jpg` straight onto the notch**
 
-🖼️ **Wallpaper themes:** import a **`.png` or `.jpg`** and it becomes the island background (dim it with the
-`bg-dim` variable).
+🖼️ **Wallpaper themes:** import a **`.png` or `.jpg`** and it becomes the island background — blurred and scrimmed
+so text stays readable. Tune it with the `bg-dim` (darkness) and `wall-blur` (softness) variables.
 
 > 🧪 **Want a head start?** Download
 > **[`nusa-example-theme.json`](https://github.com/Hiroyki/nusa/releases/download/v1.0.0/nusa-example-theme.json)**,

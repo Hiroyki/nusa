@@ -44,12 +44,21 @@ input, select { font: inherit; color: #fff; }
 .island::before { left: calc(-1 * var(--s)); background: radial-gradient(circle at 0 100%, transparent calc(var(--s) - .5px), var(--bg) var(--s)); }
 .island::after { right: calc(-1 * var(--s)); background: radial-gradient(circle at 100% 100%, transparent calc(var(--s) - .5px), var(--bg) var(--s)); }
 .island.big { box-shadow: 0 10px 26px rgba(0, 0, 0, .42); }
-/* tema wallpaper: gambar ngisi latar island, dikasih lapisan gelap tipis biar teks kebaca */
-.island.has-bg {
-  background-image: linear-gradient(rgba(0, 0, 0, var(--bg-dim, .34)), rgba(0, 0, 0, var(--bg-dim, .34))), var(--bg-image);
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
+/* tema wallpaper: gambar di layer sendiri, diblur + scrim gradien biar teks tetap kebaca & keliatan premium */
+.wall { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; opacity: 0; transition: opacity .55s var(--soft); pointer-events: none; }
+.island.has-bg .wall { opacity: 1; }
+.island.has-bg.big { box-shadow: 0 12px 30px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .09); }
+.wall::before {
+  content: ''; position: absolute; inset: -12%;
+  background-image: var(--bg-image); background-size: cover; background-position: center; background-repeat: no-repeat;
+  filter: blur(var(--wall-blur, 14px)) saturate(1.08) brightness(.92);
+  transform: scale(1.04);
+}
+.wall::after {
+  content: ''; position: absolute; inset: 0;
+  background:
+    radial-gradient(130% 120% at 50% -10%, rgba(255, 255, 255, .07), transparent 55%),
+    linear-gradient(rgba(0, 0, 0, calc(var(--bg-dim, .5) * .72)) 0%, rgba(0, 0, 0, var(--bg-dim, .5)) 60%, rgba(0, 0, 0, calc(var(--bg-dim, .5) + .12)) 100%);
 }
 .island { opacity: 1; transition-property: width, height, border-radius, box-shadow, opacity; }
 .island.yield { opacity: 0; pointer-events: none; transition: opacity .35s ease; }

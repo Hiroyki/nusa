@@ -17,6 +17,8 @@ Click it, and it unfolds into a full panel.
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4?style=flat-square)](https://github.com/Hiroyki/nusa/issues)
 [![Built by Hiroyki](https://img.shields.io/badge/built%20by-Hiroyki-5cdba8?style=flat-square&logo=github&logoColor=white)](https://github.com/Hiroyki)
 
+> **🆕 v1.0.0 — bring your own theme.** 8 built-in looks, plus import your own `.json`. [See how ↓](#-themes)
+
 <br>
 
 <img src="docs/demo.gif" width="720" alt="Nusa demo — expanding notch, switching tabs and changing themes">
@@ -109,6 +111,10 @@ A theme is just a small `.json` file. Import it from any of these:
 - 🖱️ right-click the notch → **Import theme…**
 - 🗂️ system tray menu → **Import theme…**
 - 📥 **drop the `.json` straight onto the notch**
+
+> 🧪 **Want a head start?** Download
+> **[`nusa-example-theme.json`](https://github.com/Hiroyki/nusa/releases/download/v1.0.0/nusa-example-theme.json)**,
+> change the colors, then import it.
 
 ```json
 {

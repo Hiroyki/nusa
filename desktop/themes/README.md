@@ -52,7 +52,7 @@ background. Nusa copies the image into the themes folder (resized to max 1920 px
 You can edit that JSON to add colours, a font, or raw CSS on top of the image. Two variables tune the look:
 
 - `bg-dim` (0–1) — how dark the scrim over the image is (default `0.5`).
-- `wall-blur` — how soft/frosted the wallpaper is (default `14px`; use `0px` for a sharp image).
+- `wall-blur` — optional blur for the wallpaper. **Default `0` (sharp).** Set e.g. `"12px"` if you want a soft look.
 
 ```json
 { "name": "My Wallpaper", "colors": { "bg-dim": "0.5", "wall-blur": "8px" }, "background": "my-wallpaper.png" }

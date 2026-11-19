@@ -49,17 +49,18 @@ input, select { font: inherit; color: #fff; }
 .island.has-bg .wall { opacity: 1; }
 .island.has-bg.big { box-shadow: 0 12px 30px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .09); }
 .wall::before {
-  content: ''; position: absolute; inset: -12%;
+  content: ''; position: absolute; inset: 0;
   background-image: var(--bg-image); background-size: cover; background-position: center; background-repeat: no-repeat;
-  filter: blur(var(--wall-blur, 14px)) saturate(1.08) brightness(.92);
-  transform: scale(1.04);
+  /* Gambar tajam secara default. Mau diburamin? set `wall-blur` (mis. "12px"). */
+  filter: blur(var(--wall-blur, 0px));
 }
 .wall::after {
   content: ''; position: absolute; inset: 0;
-  background:
-    radial-gradient(130% 120% at 50% -10%, rgba(255, 255, 255, .07), transparent 55%),
-    linear-gradient(rgba(0, 0, 0, calc(var(--bg-dim, .5) * .72)) 0%, rgba(0, 0, 0, var(--bg-dim, .5)) 60%, rgba(0, 0, 0, calc(var(--bg-dim, .5) + .12)) 100%);
+  /* cuma scrim gelap biar teks kebaca di atas foto — bukan efek blur */
+  background: linear-gradient(rgba(0, 0, 0, calc(var(--bg-dim, .42) * .7)) 0%, rgba(0, 0, 0, var(--bg-dim, .42)) 55%, rgba(0, 0, 0, calc(var(--bg-dim, .42) + .16)) 100%);
 }
+/* Teks dikasih bayangan tipis biar tetap kebaca tanpa ngeblur gambarnya */
+.island.has-bg .content { text-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
 .island { opacity: 1; transition-property: width, height, border-radius, box-shadow, opacity; }
 .island.yield { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
 .island .tint { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .6s; }

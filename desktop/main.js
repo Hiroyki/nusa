@@ -207,28 +207,46 @@ ipcMain.on('file-drag', async (e, p) => {
   e.sender.startDrag({ file: p, icon: icon.isEmpty() ? nativeImage.createFromPath(path.join(__dirname, 'build', 'tray.png')) : icon });
 });
 
-/* ---------- Tema: file JSON di folder userData/themes ---------- */
-// Tema = { name, colors: { mint, late, rest, green, bg, text, dim, faint, line, chip, chip2 }, font }
-// Warnanya disuntik ke CSS variable pas render; berkasnya disimpan di luar app biar aman pas update.
-const COLOR_KEYS = ['mint', 'late', 'rest', 'green', 'bg', 'text', 'dim', 'faint', 'line', 'chip', 'chip2'];
+/* ---------- Tema: file JSON/CSS di folder userData/themes ---------- */
+// Bebas dikustom: tiap key di `colors`/`vars` (atau key di root) jadi CSS variable `--<key>`.
+// Contoh: { "name": "X", "colors": { "mint": "#0ff", "bg": "#111", "my-var": "2px" } }
+// Bisa juga nempelin CSS mentah lewat field "css", atau impor file `.css` langsung.
+const RESERVED = new Set(['name', 'font', 'css', 'vars', 'colors', 'id']);
+const VAR_RE = /^-{0,2}[a-z][a-z0-9-]*$/i;
 const slug = (s) => String(s || 'theme').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'theme';
-// Nilai CSS yang boleh masuk: cuma teks warna pendek, tanpa hal berbahaya (url(), ;, {}, <>, dsb.)
-const safeValue = (v) => (typeof v === 'string' && v.trim().length > 0 && v.length <= 120 && !/[;{}<>]|url\s*\(/i.test(v) ? v.trim() : null);
+// Nilai CSS yang boleh masuk: teks pendek, tanpa hal berbahaya (; {} <> url()).
+const safeValue = (v) => (typeof v === 'string' && v.trim().length > 0 && v.length <= 200 && !/[;{}<>]|url\s*\(/i.test(v) ? v.trim() : null);
+const safeCss = (s) => (typeof s === 'string' && s.length > 0 && s.length <= 40000 && !/<\/style/i.test(s) ? s : null);
 
-function normalizeTheme(raw) {
+function normalizeTheme(raw, fallbackName) {
   if (!raw || typeof raw !== 'object') return { error: 'invalid' };
-  const name = String(raw.name || '').trim().slice(0, 40);
+  const name = String(raw.name || fallbackName || '').trim().slice(0, 40);
   if (!name) return { error: 'invalid' };
+  const src = {};
+  if (raw.colors && typeof raw.colors === 'object') Object.assign(src, raw.colors);
+  if (raw.vars && typeof raw.vars === 'object') Object.assign(src, raw.vars);
+  for (const [k, v] of Object.entries(raw)) if (!RESERVED.has(k)) src[k] = v;
   const colors = {};
-  for (const k of COLOR_KEYS) { const v = safeValue(raw.colors?.[k] ?? raw[k]); if (v) colors[k] = v; }
+  for (const [k, v] of Object.entries(src)) {
+    if (!VAR_RE.test(k)) continue;
+    const val = safeValue(v);
+    if (val) colors[k.replace(/^--/, '')] = val;
+  }
   const font = safeValue(raw.font);
-  return { name, colors, ...(font ? { font } : {}) };
+  const css = safeCss(raw.css);
+  return { name, colors, ...(font ? { font } : {}), ...(css ? { css } : {}) };
 }
+
 const themeDir = () => path.join(app.getPath('userData'), 'themes');
+/** Baca file tema: `.json` (schema di atas) atau `.css` (CSS mentah). */
 function readTheme(file) {
+  const ext = path.extname(file).toLowerCase();
+  const base = path.basename(file, ext);
   try {
-    const t = normalizeTheme(JSON.parse(fs.readFileSync(file, 'utf8')));
-    return t.error ? null : { id: path.basename(file, '.json'), ...t };
+    const text = fs.readFileSync(file, 'utf8');
+    const t = ext === '.css' ? { name: base, colors: {}, css: safeCss(text) } : normalizeTheme(JSON.parse(text), base);
+    if (t.error || (ext === '.css' && !t.css)) return null;
+    return { id: slug(t.name), ...t };
   } catch { return null; }
 }
 function listThemes() {
@@ -237,21 +255,28 @@ function listThemes() {
 }
 function saveTheme(t) {
   const id = slug(t.name);
+  const clean = { name: t.name, colors: t.colors || {} };
+  if (t.font) clean.font = t.font;
+  if (t.css) clean.css = t.css;
   fs.mkdirSync(themeDir(), { recursive: true });
-  fs.writeFileSync(path.join(themeDir(), id + '.json'), JSON.stringify(t, null, 2));
-  return { ...t, id };
+  fs.writeFileSync(path.join(themeDir(), id + '.json'), JSON.stringify(clean, null, 2));
+  return { ...clean, id };
 }
 ipcMain.handle('themes', () => listThemes());
 ipcMain.handle('theme-import', async () => {
-  const r = await dialog.showOpenDialog(win, { title: 'Import Nusa theme', filters: [{ name: 'Nusa theme', extensions: ['json'] }], properties: ['openFile'] });
+  const r = await dialog.showOpenDialog(win, {
+    title: 'Import theme',
+    filters: [{ name: 'Theme files', extensions: ['json', 'css'] }, { name: 'All files', extensions: ['*'] }],
+    properties: ['openFile'],
+  });
   if (r.canceled || !r.filePaths[0]) return null;
-  const t = normalizeTheme(readTheme(r.filePaths[0]) || {});
-  return t.error ? t : saveTheme(t);
+  const t = readTheme(r.filePaths[0]);
+  return t ? saveTheme(t) : { error: 'invalid' };
 });
 ipcMain.handle('theme-import-path', (_e, p) => {
-  if (!isFile(p) || !/\.json$/i.test(p)) return null;
-  const t = normalizeTheme(readTheme(p) || {});
-  return t.error ? t : saveTheme(t);
+  if (!isFile(p) || !/\.(json|css)$/i.test(p)) return null;
+  const t = readTheme(p);
+  return t ? saveTheme(t) : { error: 'invalid' };
 });
 ipcMain.handle('theme-delete', (_e, id) => {
   if (/^[a-z0-9-]+$/.test(String(id))) fs.rmSync(path.join(themeDir(), id + '.json'), { force: true });

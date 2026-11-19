@@ -16,7 +16,8 @@ const isWin = window.nusa?.platform === 'win32';
 /* ================= tema ================= */
 // Tema bawaan cuma menimpa sebagian variabel warna. Tema custom diimpor dari file .json
 // (lewat dialog, atau langsung drop file-nya ke notch) dan disimpan di userData/themes.
-const THEME_KEYS = ['mint', 'late', 'rest', 'green', 'bg', 'text', 'dim', 'faint', 'line', 'chip', 'chip2'];
+// Semua key di `colors` bebas → jadi CSS variable `--<key>`. Tema juga bisa nempelin CSS mentah.
+let appliedVars = [];
 const BUILTIN_THEMES = [
   { id: 'classic', name: 'Classic', colors: {} },
   { id: 'midnight', name: 'Midnight', colors: { mint: '#5cc8ff', green: '#3ea6ff', rest: '#8ab4ff', late: '#ff6b81', bg: '#080d18', line: 'rgba(255,255,255,.12)', chip: 'rgba(255,255,255,.1)', chip2: 'rgba(255,255,255,.18)' } },
@@ -33,10 +34,16 @@ const isCustomTheme = (id) => S.customThemes.some((t) => t.id === id);
 /** Suntik warna tema ke CSS variable di :root. Tema "classic" = nggak nimpa apa-apa. */
 function applyTheme() {
   const t = themeById(S.theme), root = document.documentElement.style;
-  for (const k of THEME_KEYS) root.removeProperty('--' + k);
+  for (const k of appliedVars) root.removeProperty(k);
+  appliedVars = [];
   root.removeProperty('--appfont');
-  for (const [k, v] of Object.entries(t.colors || {})) if (THEME_KEYS.includes(k)) root.setProperty('--' + k, v);
+  for (const [k, v] of Object.entries(t.colors || {})) { const name = '--' + k.replace(/^--/, ''); root.setProperty(name, v); appliedVars.push(name); }
   if (t.font) root.setProperty('--appfont', t.font);
+  let el = document.getElementById('nusa-theme-css');
+  if (t.css) {
+    if (!el) { el = document.createElement('style'); el.id = 'nusa-theme-css'; document.head.appendChild(el); }
+    el.textContent = t.css;
+  } else if (el) el.remove();
 }
 
 async function loadThemes() {
@@ -222,7 +229,7 @@ function flashHTML(f) {
     case 'theme':
       return `<span class="badge" style="color:var(--mint)">${IC.palette}</span><span class="txt"><b>${esc(f.name)} theme applied</b><small>Saved to your themes</small></span><span style="color:var(--green);font-size:16px">${IC.check}</span>`;
     case 'themeErr':
-      return `<span class="badge" style="color:var(--late)">${IC.palette}</span><span class="txt"><b>Couldn’t import theme</b><small>Make sure it’s a Nusa theme .json file</small></span><span style="color:var(--late);font-size:16px">${IC.xCircle}</span>`;
+      return `<span class="badge" style="color:var(--late)">${IC.palette}</span><span class="txt"><b>Couldn’t import theme</b><small>Use a theme .json or .css file</small></span><span style="color:var(--late);font-size:16px">${IC.xCircle}</span>`;
     case 'volume': return `<span data-live="volFlash" style="display:contents"></span>`;
     case 'low': return smallRow(IC.battLow, 'var(--late)', 'Low battery', `${f.percent}%`, 'var(--late)');
     case 'unplug': return smallRow(IC.plug, 'var(--dim)', 'Charger removed', `${f.percent}%`, '#fff');
@@ -1008,8 +1015,8 @@ document.addEventListener('drop', async (e) => {
   S.dropping = false;
   const paths = [...(e.dataTransfer?.files || [])].map((f) => nusa.filePath(f)).filter(Boolean);
   // File .json = tema: impor & langsung pakai. Sisanya masuk Rak.
-  for (const p of paths.filter((x) => /\.json$/i.test(x))) await useImportedTheme(await nusa.themeImportPath(p));
-  for (const p of paths.filter((x) => !/\.json$/i.test(x))) await addToShelf(p);
+  for (const p of paths.filter((x) => /\.(json|css)$/i.test(x))) await useImportedTheme(await nusa.themeImportPath(p));
+  for (const p of paths.filter((x) => !/\.(json|css)$/i.test(x))) await addToShelf(p);
   if (S.expanded) render(true);
 });
 document.addEventListener('dragstart', (e) => {

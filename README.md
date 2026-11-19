@@ -124,8 +124,10 @@ A theme is just a small `.json` file. Import it from any of these:
 }
 ```
 
-Every field is optional — anything you leave out falls back to the default dark look. Switch back any time
-with **Theme → Reset to Classic**. Full format & example in [`desktop/themes/`](desktop/themes/README.md).
+**Fully yours.** Every key under `colors` (or `vars`) becomes a CSS variable — use the built-ins or invent your own.
+You can also drop in raw CSS with the `css` field, or import a **`.css` file directly** (the import dialog accepts
+both `.json` and `.css`). Switch back any time with **Theme → Reset to Classic**. Full format, examples and
+safety limits in [`desktop/themes/`](desktop/themes/README.md).
 
 ## 🚀 Install
 

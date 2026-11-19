@@ -27,6 +27,14 @@ ok('alarm: nggak dobel', a.check(new Date(+maghrib - 300000)) === null);
 ok('alarm: masuk waktu', a.check(new Date(+maghrib + 5000))?.type === 'now');
 ok('alarm: Mac/PC bangun telat diem', new Prayer.Alarm(Prayer.city('Cikarang')).check(new Date(+maghrib + 300000)) === null);
 
+// Lokasi otomatis: tempat bebas hasil deteksi harus ngasih jadwal yang sama kayak kota bawaan di titik yang sama
+const auto = Prayer.place({ name: 'Cikarang', lat: -6.2615, lon: 107.1528, tz: 'Asia/Jakarta' });
+const day = new Date('2026-11-08T12:00:00+07:00');
+ok('lokasi otomatis = kota bawaan', Prayer.times(auto, day).every((t, i) => +t.date === +Prayer.times(Prayer.city('Cikarang'), day)[i].date));
+ok('label zona WIB/WITA/WIT', ['Asia/Jakarta', 'Asia/Makassar', 'Asia/Jayapura'].map(Prayer.zoneLabel).join() === 'WIB,WITA,WIT');
+ok('label zona luar negeri', Prayer.zoneLabel('Asia/Singapore') === 'GMT+8');
+ok('zona ngaco → aman', Prayer.place({ name: 'X', lat: 1, lon: 2, tz: 'Not/AZone' }).tz === 'Asia/Jakarta');
+
 // Pembaca tugas: "sekarang" = Minggu 8 Nov 2026 17:30 (jam lokal mesin tes)
 const now = new Date(2026, 10, 8, 17, 30);
 const fmt = (d) => d ? `${['Sun', 'Mon', 'Tue'][d.getDay()]} ${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '-';

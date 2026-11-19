@@ -5,7 +5,7 @@
   "desktopName": "Nusa",
   "description": "Dynamic Island for Windows, macOS & Linux",
   "author": "Quraish Rahmatulloh",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "main": "main.js",
   "scripts": {
     "assets": "node scripts/assets.js",
@@ -34,6 +34,7 @@
       "media.js",
       "audio.js",
       "calendar.js",
+      "location.js",
       "app/**/*",
       "build/tray.png"
     ],
@@ -93,5 +94,5 @@
       ]
     }
   },
-  "homepage": "https://github.com/MrColdZs/nusa"
+  "homepage": "https://github.com/Hiroyki/nusa"
 }

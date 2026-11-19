@@ -6,6 +6,7 @@ const { execFile } = require('child_process');
 const media = require('./media');
 const audio = require('./audio');
 const calendar = require('./calendar');
+const location = require('./location');
 
 const W = 840, H = 440;
 let win = null, tray = null;
@@ -141,6 +142,8 @@ ipcMain.handle('asset', (_e, name) => {
   return fs.readFileSync(path.join(__dirname, 'app', 'assets', name), 'utf8');
 });
 ipcMain.on('media-cmd', (_e, cmd) => media.command(cmd));
+// Lokasi user (buat sholat, kiblat, cuaca); dipanggil pas nyala & tiap 30 menit kalau mode Current location
+ipcMain.handle('locate', () => location.locate().catch(() => null));
 ipcMain.on('volume', (_e, level) => audio.setVolume(level));
 ipcMain.on('mute', (_e, on) => audio.setMute(!!on));
 ipcMain.handle('calendar', (_e, start, days) => calendar.fetch(+start, Math.min(31, Math.max(1, +days || 7))));

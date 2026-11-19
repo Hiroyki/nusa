@@ -43,11 +43,18 @@ function applyTheme() {
   appliedVars = [];
   for (const [k, v] of Object.entries(t.colors || {})) { root.setProperty('--' + k, v); appliedVars.push('--' + k); }
 }
+// Lokasi: default ikut lokasi user (LS city = 'auto'); hasil deteksi terakhir disimpen biar pas nyala langsung kepake
+const AUTO_PLACE = LS.get('city', 'auto') === 'auto';
+const startPlace = () => {
+  if (!AUTO_PLACE) return Prayer.city(LS.get('city'));
+  const last = LS.get('autoPlace', null);
+  return last ? Prayer.place(last) : Prayer.city('Jakarta');
+};
 const S = {
   hover: false, expanded: false, pinned: false, tab: LS.get('tab', 'home'), flash: null,
   media: null, tint: null, weather: null, battery: null,
   timer: null, focus: null, clips: [], tasks: LS.get('tasks', []),
-  place: Prayer.city(LS.get('city', 'Cikarang')), sound: LS.get('sound', 'adzan'), soon: LS.get('soon', true),
+  place: startPlace(), autoPlace: AUTO_PLACE, locating: false, sound: LS.get('sound', 'adzan'), soon: LS.get('soon', true),
   q: { book: null, surah: LS.get('qSurah', 1), mark: LS.get('qMark', null), english: LS.get('qEnglish', false), font: LS.get('qFont', 'Scheherazade New') },
   reciting: null, music: { queue: [], idx: -1, playing: false, online: false, query: '', results: [], searching: false },
   menu: null, taskText: '', taskPick: null,
@@ -524,7 +531,7 @@ function prayerHTML() {
     <div class="col" style="flex:1;margin-left:22px;gap:6px">
       <div style="display:flex;justify-content:space-between;font-size:11px"><b>Today</b><span style="color:var(--dim)" class="mono" data-live="prMarks"></span></div>
       <div class="track" data-live="prTrack"></div>
-      <div class="chips"><button class="chip" data-act="cityMenu">${IC.pin} ${esc(S.place.name)} · ${S.place.zone}</button>
+      <div class="chips"><button class="chip" data-act="cityMenu" title="${S.autoPlace ? 'Current location' : 'Chosen city'}">${S.autoPlace ? `<span style="color:var(--mint);display:inline-flex">${IC.pin}</span>` : IC.pin} ${S.autoPlace && S.locating && !LS.get('autoPlace', null) ? 'Locating…' : esc(S.place.name)} · ${S.place.zone}</button>
         <span class="chip">${qiblaArrow()} Qibla ${Math.round(Prayer.qibla(S.place).deg)}° ${Prayer.qibla(S.place).point}</span>
         <button class="chip" data-act="tab" data-tab="quran">${IC.book} Quran</button><span class="sp"></span>
         <button class="chip" data-act="soundMenu">${IC.speaker} ${{ adzan: 'Adzan', tone: 'Tone', silent: 'Silent' }[S.sound]} ${IC.chevron}</button></div>
@@ -565,6 +572,32 @@ function prTrackHTML() {
 
 let alarm = new Prayer.Alarm(S.place);
 alarm.check(new Date()); // yang udah lewat pas app baru nyala nggak dibunyiin
+
+/** Ganti tempat: jadwal sholat, kiblat & cuaca ikut. */
+function setPlace(p) {
+  S.place = p;
+  alarm = new Prayer.Alarm(p);
+  alarm.check(new Date());
+  loadWeather();
+  render(true);
+}
+
+/** Mode Current location: tanya lokasi ke proses utama (Windows Location → cadangan IP). */
+async function locateUser() {
+  if (!S.autoPlace || S.locating) return;
+  S.locating = true;
+  const r = await nusa.locate().catch(() => null);
+  S.locating = false;
+  if (!S.autoPlace) return; // keburu pilih kota manual
+  if (!r) return render(true);
+  // Geser < ~3 km (WiFi kadang ngasih titik beda dikit) = masih di tempat yang sama: nama & jadwal nggak diganti-ganti
+  const last = LS.get('autoPlace', null);
+  const near = last && last.tz === r.tz && Math.abs(last.lat - r.lat) < 0.03 && Math.abs(last.lon - r.lon) < 0.03;
+  if (!near) LS.set('autoPlace', r);
+  const p = Prayer.place(near ? last : r);
+  if (p.name !== S.place.name || p.lat !== S.place.lat || p.lon !== S.place.lon || p.tz !== S.place.tz) setPlace(p);
+  else render(true);
+}
 function checkPrayer() {
   const e = alarm.check(new Date());
   if (!e) return;
@@ -719,7 +752,8 @@ function menuHTML() {
   const m = S.menu;
   const item = (label, act, data, on) => `<button class="${on ? 'on' : ''}" data-act="${act}" ${Object.entries(data).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ')}>${esc(label)}</button>`;
   let body = '';
-  if (m.type === 'city') body = Prayer.CITIES.map((c) => item(`${c.name} · ${c.zone}`, 'city', { c: c.name }, c.name === S.place.name)).join('');
+  if (m.type === 'city') body = item(S.autoPlace ? `Current location · ${S.locating ? 'locating…' : S.place.name}` : 'Current location', 'cityAuto', {}, S.autoPlace)
+    + `<div class="h">Cities</div>` + Prayer.CITIES.map((c) => item(`${c.name} · ${c.zone}`, 'city', { c: c.name }, !S.autoPlace && c.name === S.place.name)).join('');
   if (m.type === 'sound') body = [['adzan', 'Adzan'], ['tone', 'Tone'], ['silent', 'Silent']].map(([k, l]) => item(l, 'sound', { s: k }, S.sound === k)).join('')
     + `<div class="h"></div>` + item('Remind me 10 minutes before', 'soonToggle', {}, S.soon) + item('Stop sound', 'soundStop', {}, false);
   if (m.type === 'surah') body = S.q.book.surahs.map((s) => item(`${s.n}. ${s.tr} · ${s.en}`, 'surah', { n: s.n }, s.n === S.q.surah)).join('');
@@ -1091,7 +1125,8 @@ document.addEventListener('click', (e) => {
     focusTask: () => startFocus(25, task()),
     dismiss: () => { S.flash = null; render(); },
     cityMenu: () => openMenu('city', el), soundMenu: () => openMenu('sound', el),
-    city: () => { S.place = Prayer.city(d.c); LS.set('city', d.c); alarm = new Prayer.Alarm(S.place); alarm.check(new Date()); S.menu = null; loadWeather(); render(true); },
+    city: () => { S.autoPlace = false; LS.set('city', d.c); S.menu = null; setPlace(Prayer.city(d.c)); },
+    cityAuto: () => { S.autoPlace = true; LS.set('city', 'auto'); S.menu = null; render(true); locateUser(); },
     sound: () => { S.sound = d.s; LS.set('sound', d.s); S.menu = null; render(true); playPrayerSound(); setTimeout(stopPrayerSound, 4000); },
     soonToggle: () => { S.soon = !S.soon; LS.set('soon', S.soon); S.menu = null; render(true); },
     soundStop: () => { stopPrayerSound(); S.menu = null; render(true); },
@@ -1146,6 +1181,9 @@ setInterval(checkPrayer, 15000);
 setTimeout(() => { checkTasks(); setInterval(checkTasks, 10000); }, 3000);
 setInterval(loadWeather, 15 * 60000);
 loadWeather();
+// Laptop dibawa pindah kota: dicek ulang tiap 30 menit
+locateUser();
+setInterval(locateUser, 30 * 60000);
 render(true);
 
 // Pengait buat tes otomatis (dipakai mode potret pas development)

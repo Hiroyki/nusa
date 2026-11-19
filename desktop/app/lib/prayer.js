@@ -113,5 +113,21 @@
     }
   }
 
-  root.Prayer = { CITIES, times, next, qibla, Alarm, city: (name) => CITIES.find((c) => c.name === name) || CITIES[0] };
+  /** Label zona: WIB/WITA/WIT buat Indonesia, selain itu "GMT+8" dst. */
+  function zoneLabel(tz) {
+    const id = { 'Asia/Jakarta': 'WIB', 'Asia/Pontianak': 'WIB', 'Asia/Makassar': 'WITA', 'Asia/Jayapura': 'WIT' }[tz];
+    if (id) return id;
+    try {
+      return new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'shortOffset' }).formatToParts(new Date()).find((p) => p.type === 'timeZoneName')?.value || tz;
+    } catch { return tz; }
+  }
+
+  /** Tempat bebas (hasil deteksi lokasi): { name, lat, lon, tz } → bentuk yang sama kayak CITIES. */
+  function place({ name, lat, lon, tz }) {
+    let zone = tz;
+    try { new Intl.DateTimeFormat('en-US', { timeZone: tz }); } catch { zone = 'Asia/Jakarta'; }
+    return { name: String(name || 'Current location'), lat: +lat, lon: +lon, tz: zone, zone: zoneLabel(zone) };
+  }
+
+  root.Prayer = { CITIES, times, next, qibla, Alarm, place, zoneLabel, city: (name) => CITIES.find((c) => c.name === name) || CITIES[0] };
 })(typeof window !== 'undefined' ? window : globalThis);

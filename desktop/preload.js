@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('nusa', {
   loginItem: (on) => ipcRenderer.invoke('login-item', on),
   contextMenu: () => ipcRenderer.send('context-menu'),
   calendar: (start, days) => ipcRenderer.invoke('calendar', start, days),
+  locate: () => ipcRenderer.invoke('locate'),
   calendarSettings: () => ipcRenderer.send('calendar-settings'),
   senandung: (method, route, body) => ipcRenderer.invoke('senandung', method, route, body),
   asset: (name) => ipcRenderer.invoke('asset', name),

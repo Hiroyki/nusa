@@ -21,6 +21,7 @@ contextBridge.exposeInMainWorld('nusa', {
   themeImport: () => ipcRenderer.invoke('theme-import'),
   themeImportPath: (p) => ipcRenderer.invoke('theme-import-path', p),
   themeDelete: (id) => ipcRenderer.invoke('theme-delete', id),
+  themeBackground: (id) => ipcRenderer.invoke('theme-background', id),
   // Rak: path file yang di-drop (Electron baru nggak ngasih File.path lagi), info/ikon, buka, seret keluar
   filePath: (file) => { try { return webUtils.getPathForFile(file); } catch { return ''; } },
   fileInfo: (p) => ipcRenderer.invoke('file-info', p),

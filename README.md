@@ -110,7 +110,10 @@ A theme is just a small `.json` file. Import it from any of these:
 - ⚙️ gear icon in the panel → **Import theme…**
 - 🖱️ right-click the notch → **Import theme…**
 - 🗂️ system tray menu → **Import theme…**
-- 📥 **drop the `.json` straight onto the notch**
+- 📥 **drop a `.json`, `.css`, `.png` or `.jpg` straight onto the notch**
+
+🖼️ **Wallpaper themes:** import a **`.png` or `.jpg`** and it becomes the island background (dim it with the
+`bg-dim` variable).
 
 > 🧪 **Want a head start?** Download
 > **[`nusa-example-theme.json`](https://github.com/Hiroyki/nusa/releases/download/v1.0.0/nusa-example-theme.json)**,
@@ -125,8 +128,8 @@ A theme is just a small `.json` file. Import it from any of these:
 ```
 
 **Fully yours.** Every key under `colors` (or `vars`) becomes a CSS variable — use the built-ins or invent your own.
-You can also drop in raw CSS with the `css` field, or import a **`.css` file directly** (the import dialog accepts
-both `.json` and `.css`). Switch back any time with **Theme → Reset to Classic**. Full format, examples and
+You can also drop in raw CSS with the `css` field, import a **`.css` file directly**, or use a **`.png`/`.jpg`** as a
+wallpaper background (the import dialog accepts `.json`, `.css`, `.png` and `.jpg`). Switch back any time with **Theme → Reset to Classic**. Full format, examples and
 safety limits in [`desktop/themes/`](desktop/themes/README.md).
 
 ## 🚀 Install

@@ -44,6 +44,18 @@ function applyTheme() {
     if (!el) { el = document.createElement('style'); el.id = 'nusa-theme-css'; document.head.appendChild(el); }
     el.textContent = t.css;
   } else if (el) el.remove();
+  applyThemeBg();
+}
+
+// Tema wallpaper: latar island pakai gambar (PNG/JPG). Diambil dari proses utama, di-cache.
+const bgCache = {};
+async function applyThemeBg() {
+  const t = themeById(S.theme), island = $('#island');
+  if (!island) return;
+  if (!t.background) { island.classList.remove('has-bg'); island.style.removeProperty('--bg-image'); return; }
+  island.classList.add('has-bg');
+  if (!(t.id in bgCache)) { try { bgCache[t.id] = await nusa.themeBackground(t.id); } catch { bgCache[t.id] = null; } }
+  if (bgCache[t.id]) island.style.setProperty('--bg-image', `url("${bgCache[t.id]}")`);
 }
 
 async function loadThemes() {
@@ -229,7 +241,7 @@ function flashHTML(f) {
     case 'theme':
       return `<span class="badge" style="color:var(--mint)">${IC.palette}</span><span class="txt"><b>${esc(f.name)} theme applied</b><small>Saved to your themes</small></span><span style="color:var(--green);font-size:16px">${IC.check}</span>`;
     case 'themeErr':
-      return `<span class="badge" style="color:var(--late)">${IC.palette}</span><span class="txt"><b>Couldn’t import theme</b><small>Use a theme .json or .css file</small></span><span style="color:var(--late);font-size:16px">${IC.xCircle}</span>`;
+      return `<span class="badge" style="color:var(--late)">${IC.palette}</span><span class="txt"><b>Couldn’t import theme</b><small>Use a theme .json, .css, .png or .jpg file</small></span><span style="color:var(--late);font-size:16px">${IC.xCircle}</span>`;
     case 'volume': return `<span data-live="volFlash" style="display:contents"></span>`;
     case 'low': return smallRow(IC.battLow, 'var(--late)', 'Low battery', `${f.percent}%`, 'var(--late)');
     case 'unplug': return smallRow(IC.plug, 'var(--dim)', 'Charger removed', `${f.percent}%`, '#fff');
@@ -1015,8 +1027,8 @@ document.addEventListener('drop', async (e) => {
   S.dropping = false;
   const paths = [...(e.dataTransfer?.files || [])].map((f) => nusa.filePath(f)).filter(Boolean);
   // File .json = tema: impor & langsung pakai. Sisanya masuk Rak.
-  for (const p of paths.filter((x) => /\.(json|css)$/i.test(x))) await useImportedTheme(await nusa.themeImportPath(p));
-  for (const p of paths.filter((x) => !/\.(json|css)$/i.test(x))) await addToShelf(p);
+  for (const p of paths.filter((x) => /\.(json|css|png|jpe?g)$/i.test(x))) await useImportedTheme(await nusa.themeImportPath(p));
+  for (const p of paths.filter((x) => !/\.(json|css|png|jpe?g)$/i.test(x))) await addToShelf(p);
   if (S.expanded) render(true);
 });
 document.addEventListener('dragstart', (e) => {

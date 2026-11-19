@@ -44,6 +44,13 @@ input, select { font: inherit; color: #fff; }
 .island::before { left: calc(-1 * var(--s)); background: radial-gradient(circle at 0 100%, transparent calc(var(--s) - .5px), var(--bg) var(--s)); }
 .island::after { right: calc(-1 * var(--s)); background: radial-gradient(circle at 100% 100%, transparent calc(var(--s) - .5px), var(--bg) var(--s)); }
 .island.big { box-shadow: 0 10px 26px rgba(0, 0, 0, .42); }
+/* tema wallpaper: gambar ngisi latar island, dikasih lapisan gelap tipis biar teks kebaca */
+.island.has-bg {
+  background-image: linear-gradient(rgba(0, 0, 0, var(--bg-dim, .34)), rgba(0, 0, 0, var(--bg-dim, .34))), var(--bg-image);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+}
 .island { opacity: 1; transition-property: width, height, border-radius, box-shadow, opacity; }
 .island.yield { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
 .island .tint { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0; transition: opacity .6s; }

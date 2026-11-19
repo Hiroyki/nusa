@@ -36,8 +36,25 @@ Go back to the default look with **Theme → Reset to Classic**.
 |---|---|
 | `name` | Theme name (shown in the menu). Optional — falls back to the filename. |
 | `colors` / `vars` | **Any keys you want.** Each key becomes a CSS variable `--<key>`. Use `mint`, `bg`, … or your own custom variable. |
+| `background` | Image file (relative to the themes folder) used as the island wallpaper (optional). |
 | `font` | UI font (optional). |
 | `css` | Raw CSS injected into the page (optional) — this is where you can change borders, shadows, sizes, anything. |
+
+## Image themes (wallpaper)
+
+Drop a **`.png`** or **`.jpg`** on the notch (or gear ⚙ → **Import theme…**) and it becomes the island
+background. Nusa copies the image into the themes folder (resized to max 1920 px) and creates a theme entry:
+
+```json
+{ "name": "My Wallpaper", "colors": {}, "background": "my-wallpaper.png" }
+```
+
+You can edit that JSON to add colours, a font, or raw CSS on top of the image. To dim the wallpaper behind
+the text, set the `bg-dim` variable (0–1):
+
+```json
+{ "name": "My Wallpaper", "colors": { "bg-dim": "0.5" }, "background": "my-wallpaper.png" }
+```
 
 ## CSS format
 

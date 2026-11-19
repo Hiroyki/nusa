@@ -211,8 +211,10 @@ ipcMain.on('file-drag', async (e, p) => {
 // Bebas dikustom: tiap key di `colors`/`vars` (atau key di root) jadi CSS variable `--<key>`.
 // Contoh: { "name": "X", "colors": { "mint": "#0ff", "bg": "#111", "my-var": "2px" } }
 // Bisa juga nempelin CSS mentah lewat field "css", atau impor file `.css` langsung.
-const RESERVED = new Set(['name', 'font', 'css', 'vars', 'colors', 'id']);
+const RESERVED = new Set(['name', 'font', 'css', 'vars', 'colors', 'id', 'background']);
 const VAR_RE = /^-{0,2}[a-z][a-z0-9-]*$/i;
+// Format gambar yang bisa jadi "tema wallpaper"
+const IMG_RE = /\.(png|jpe?g)$/i;
 const slug = (s) => String(s || 'theme').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'theme';
 // Nilai CSS yang boleh masuk: teks pendek, tanpa hal berbahaya (; {} <> url()).
 const safeValue = (v) => (typeof v === 'string' && v.trim().length > 0 && v.length <= 200 && !/[;{}<>]|url\s*\(/i.test(v) ? v.trim() : null);
@@ -234,7 +236,8 @@ function normalizeTheme(raw, fallbackName) {
   }
   const font = safeValue(raw.font);
   const css = safeCss(raw.css);
-  return { name, colors, ...(font ? { font } : {}), ...(css ? { css } : {}) };
+  const bg = typeof raw.background === 'string' && /^[a-z0-9._-]+$/i.test(raw.background) ? raw.background : null;
+  return { name, colors, ...(bg ? { background: bg } : {}), ...(font ? { font } : {}), ...(css ? { css } : {}) };
 }
 
 const themeDir = () => path.join(app.getPath('userData'), 'themes');
@@ -258,28 +261,65 @@ function saveTheme(t) {
   const clean = { name: t.name, colors: t.colors || {} };
   if (t.font) clean.font = t.font;
   if (t.css) clean.css = t.css;
+  if (t.background) clean.background = t.background;
   fs.mkdirSync(themeDir(), { recursive: true });
   fs.writeFileSync(path.join(themeDir(), id + '.json'), JSON.stringify(clean, null, 2));
   return { ...clean, id };
 }
+/** Impor gambar (PNG/JPG) sebagai tema wallpaper: disalin ke folder tema + dicat latar island. */
+function importImageTheme(file) {
+  const img = nativeImage.createFromPath(file);
+  if (img.isEmpty()) return { error: 'invalid' };
+  const { width, height } = img.getSize();
+  const max = 1920;
+  const scale = Math.min(1, max / Math.max(width, height));
+  const out = scale < 1 ? img.resize({ width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)), quality: 'good' }) : img;
+  const jpeg = /\.jpe?g$/i.test(file);
+  const name = (path.basename(file, path.extname(file)).trim() || 'Image theme').slice(0, 40);
+  const id = slug(name);
+  const bgFile = id + (jpeg ? '.jpg' : '.png');
+  fs.mkdirSync(themeDir(), { recursive: true });
+  fs.writeFileSync(path.join(themeDir(), bgFile), jpeg ? out.toJPEG(90) : out.toPNG());
+  const theme = { name, colors: {}, background: bgFile };
+  fs.writeFileSync(path.join(themeDir(), id + '.json'), JSON.stringify(theme, null, 2));
+  return { id, ...theme };
+}
+/** Impor tema dari file apa aja: .json / .css / gambar (.png/.jpg). */
+function importThemeFile(file) {
+  if (IMG_RE.test(file)) return importImageTheme(file);
+  const t = readTheme(file);
+  return t ? saveTheme(t) : { error: 'invalid' };
+}
 ipcMain.handle('themes', () => listThemes());
+ipcMain.handle('theme-background', (_e, id) => {
+  try {
+    if (!/^[a-z0-9-]+$/.test(String(id))) return null;
+    const t = readTheme(path.join(themeDir(), id + '.json'));
+    if (!t?.background) return null;
+    const img = nativeImage.createFromPath(path.join(themeDir(), t.background));
+    return img.isEmpty() ? null : img.toDataURL();
+  } catch { return null; }
+});
 ipcMain.handle('theme-import', async () => {
   const r = await dialog.showOpenDialog(win, {
     title: 'Import theme',
-    filters: [{ name: 'Theme files', extensions: ['json', 'css'] }, { name: 'All files', extensions: ['*'] }],
+    filters: [{ name: 'Theme files', extensions: ['json', 'css', 'png', 'jpg', 'jpeg'] }, { name: 'All files', extensions: ['*'] }],
     properties: ['openFile'],
   });
   if (r.canceled || !r.filePaths[0]) return null;
-  const t = readTheme(r.filePaths[0]);
-  return t ? saveTheme(t) : { error: 'invalid' };
+  return importThemeFile(r.filePaths[0]);
 });
 ipcMain.handle('theme-import-path', (_e, p) => {
-  if (!isFile(p) || !/\.(json|css)$/i.test(p)) return null;
-  const t = readTheme(p);
-  return t ? saveTheme(t) : { error: 'invalid' };
+  if (!isFile(p) || !/\.(json|css|png|jpe?g)$/i.test(p)) return null;
+  return importThemeFile(p);
 });
 ipcMain.handle('theme-delete', (_e, id) => {
-  if (/^[a-z0-9-]+$/.test(String(id))) fs.rmSync(path.join(themeDir(), id + '.json'), { force: true });
+  if (/^[a-z0-9-]+$/.test(String(id))) {
+    const file = path.join(themeDir(), id + '.json');
+    const t = readTheme(file);
+    if (t?.background) fs.rmSync(path.join(themeDir(), t.background), { force: true });
+    fs.rmSync(file, { force: true });
+  }
   return listThemes();
 });
 

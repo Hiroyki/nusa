@@ -34,6 +34,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var battery: BatteryWatcher!
     private var volume: VolumeWatcher!
     private var prayer: PrayerWatcher!
+    private var lyrics: LyricsEngine!
     private var pending: DispatchWorkItem?
     private var inside = false
     private var swipeDetector = SwipeDetector()
@@ -64,6 +65,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         bridge = MediaBridge(model: model)
         // Mode tes notch kosong: pembaca lagu nggak dinyalain
         if ProcessInfo.processInfo.environment["NUSA_TEST_IDLE"] == nil { bridge.start() }
+        lyrics = LyricsEngine(model: model)
+        lyrics.start()
+        // Mode tes lirik: lagu pura-pura, "judul|artis|durasi|posisi" (liriknya dicari beneran)
+        if let p = ProcessInfo.processInfo.environment["NUSA_TEST_LYRICS"]?.components(separatedBy: "|"), p.count == 4 {
+            // Ditunda: lagu asli juga baru masuk setelah notch digambar
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
+                model.media = Media(title: p[0], artist: p[1], duration: Double(p[2]) ?? 0, elapsed: Double(p[3]) ?? 0,
+                                    timestamp: Date().timeIntervalSince1970, rate: 1, playing: true)
+            }
+        }
         battery = BatteryWatcher(model: model)
         battery.start()
         volume = VolumeWatcher(model: model)
@@ -273,7 +284,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func islandRect() -> NSRect {
         var s = model.size
         // Pop-up lagu cuma buat dilihat: bagian bawahnya tembus klik biar tab tetap bisa dipencet
-        if model.flash == .track { s.height = model.notch?.height ?? 24 }
+        if model.flash == .track || model.presentation == .lyric { s.height = model.notch?.height ?? 24 }
         return NSRect(x: panel.frame.midX - s.totalWidth / 2, y: panel.frame.maxY - s.height, width: s.totalWidth, height: s.height)
     }
 
@@ -333,6 +344,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                         timestamp: Date().timeIntervalSince1970, rate: 0, playing: true)
         m.setArt(art)
     }
+    func lyric(_ m: IslandModel, _ text: String) {
+        m.lyrics = LyricsResult(key: m.media.lyricKey, state: .ok, match: LyricsMatch(synced: [LyricRow(t: 0, text: text)]))
+        m.lyricIndex = 0
+    }
     let states: [(String, IslandModel)] = [
         ("idle", model { _ in }),
         ("idle-hover", model { $0.hovering = true }),
@@ -342,6 +357,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ("track", model { music($0); $0.flash = .track }),
         ("slim", model { music($0); $0.slim = true }),
         ("music", model(music)),
+        ("lyric", model { music($0); lyric($0, "Yeah, they were all yellow") }),
+        ("lyric-long", model { music($0); lyric($0, "Ini baris lirik yang sangat panjang sekali sampai nggak muat di notch jadi dia harus jalan pelan ke ujung") }),
+        ("lyric-limit", model { music($0); lyric($0, "Yeah, they were all yellow, oh yeah"); $0.compactLimit = 192 }),
+        ("lyric-timer", model { music($0); lyric($0, "Yeah, they were all yellow"); $0.timerTotal = 1500; $0.timerEnd = Date().addingTimeInterval(900) }),
+        ("lyric-hover", model { music($0); lyric($0, "Yeah, they were all yellow, every single one of them"); $0.hovering = true }),
         ("music-limit", model { music($0); $0.compactLimit = 192 }),
         ("music-limit-timer", model { music($0); $0.compactLimit = 192; $0.timerTotal = 900; $0.timerEnd = Date().addingTimeInterval(600) }),
         ("flash-limit", model { $0.compactLimit = 192; $0.flash = .charging(percent: 83, on: false) }),
@@ -372,6 +392,8 @@ if CommandLine.arguments.count > 2, CommandLine.arguments[1] == "--render" {
     MainActor.assumeIsolated { renderStates(to: CommandLine.arguments[2]) }
     exit(0)
 }
+
+if CommandLine.arguments.contains("--test-lyrics") { exit(testLyrics() ? 0 : 1) }
 
 let app = NSApplication.shared
 let delegate = AppDelegate()

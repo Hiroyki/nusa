@@ -37,13 +37,14 @@ enum Flash: Equatable {
 }
 
 enum Presentation: Equatable {
-    case idle, music, timer, focus, flash(Flash), expanded
+    case idle, music, lyric, timer, focus, flash(Flash), expanded
 
     /// Kunci konten: ganti isi cuma kalau jenisnya berubah, bukan tiap nilai volume berubah.
     var kind: String {
         switch self {
         case .idle: "idle"
         case .music: "music"
+        case .lyric: "lyric"
         case .timer: "timer"
         case .focus: "focus"
         case .expanded: "expanded"
@@ -60,6 +61,20 @@ enum Presentation: Equatable {
             case .focusEnd: "focusEnd"
             case .device: "device"
             }
+        }
+    }
+}
+
+/// Kapan lirik tampil di notch. `click` = cuma di panel.
+enum LyricMode: String, CaseIterable {
+    case always, hover, click, off
+
+    var title: String {
+        switch self {
+        case .always: "Always"
+        case .hover: "On hover"
+        case .click: "On click"
+        case .off: "Off"
         }
     }
 }
@@ -116,6 +131,18 @@ final class IslandModel: ObservableObject {
         let w = screen.frame.width - left.width - right.width
         return w > 0 ? CGSize(width: w, height: screen.safeAreaInsets.top) : nil
     }
+    /// Lirik: diisi LyricsEngine. Logika & tampilannya di Lyrics.swift.
+    @Published var lyrics: LyricsResult?
+    @Published var lyricIndex = -1
+    @Published var lyricMode = LyricMode(rawValue: UserDefaults.standard.string(forKey: "lyricMode") ?? "") ?? .always {
+        didSet { UserDefaults.standard.set(lyricMode.rawValue, forKey: "lyricMode") }
+    }
+    /// Geseran waktu lirik per app (detik), buat app yang posisinya meleset.
+    @Published var lyricShifts = UserDefaults.standard.dictionary(forKey: "lyricShifts") as? [String: Double] ?? [:] {
+        didSet { UserDefaults.standard.set(lyricShifts, forKey: "lyricShifts") }
+    }
+    /// Tinggi baris lirik di bawah notch kamera.
+    static let lyricStrip: CGFloat = 24
     let calendar = CalendarModel()
     @Published var prayers = PrayerTimes(place: .named(UserDefaults.standard.string(forKey: "prayerPlace"))) {
         didSet { UserDefaults.standard.set(prayers.place.name, forKey: "prayerPlace") }
@@ -180,6 +207,7 @@ final class IslandModel: ObservableObject {
         if let flash { return .flash(flash) }
         if slim, !hovering { return .idle }
         if focus != nil { return .focus }
+        if lyricsVisible, lyricMode == (hovering ? .hover : .always) { return .lyric }
         if media.exists { return .music }
         if timerRunning { return .timer }
         return .idle
@@ -188,7 +216,7 @@ final class IslandModel: ObservableObject {
     /// Tampilan kecil (setinggi menu bar). Di MacBook ber-notch isinya dibagi ke kiri & kanan notch.
     var isCompact: Bool {
         switch presentation {
-        case .idle, .music, .timer, .focus: return true
+        case .idle, .music, .lyric, .timer, .focus: return true
         case .expanded: return false
         case .flash(let f):
             switch f {
@@ -203,7 +231,7 @@ final class IslandModel: ObservableObject {
     private var earWidth: CGFloat {
         switch presentation {
         case .idle: return hovering ? 92 : 0
-        case .music: return timerRunning ? 58 : 40
+        case .music, .lyric: return timerRunning ? 58 : 40
         case .timer: return 58
         case .focus: return 62
         case .flash(let f):
@@ -223,14 +251,21 @@ final class IslandModel: ObservableObject {
         let base = baseSize
         guard let n = notch else { return base }
         if isCompact {
+            if presentation == .lyric { return IslandSize(width: lyricWidth, height: n.height + Self.lyricStrip, radius: 12, shoulder: 7) }
             let ear = earWidth + (hovering && earWidth > 0 && presentation != .idle ? 6 : 0)
             if ear == 0 { return IslandSize(width: n.width, height: n.height, radius: 8, shoulder: 4) }
-            return IslandSize(width: max(n.width, min(n.width + ear * 2, compactLimit)), height: n.height, radius: 11, shoulder: 7)
+            return IslandSize(width: keepLyricWidth(max(n.width, min(n.width + ear * 2, compactLimit))), height: n.height, radius: 11, shoulder: 7)
         }
         var s = base
         s.height += n.height
         s.width = max(s.width, n.width + 60)
         return s
+    }
+
+    /// Kursor masuk pas lirik tampil: notch nggak boleh lebih sempit dari liriknya. Kalau menyempit,
+    /// kursor di pinggir jadi "keluar" → lirik melebar lagi → masuk lagi → kedip terus.
+    private func keepLyricWidth(_ width: CGFloat) -> CGFloat {
+        hovering && presentation == .music && lyricsVisible && lyricMode == .always ? max(width, lyricWidth) : width
     }
 
     /// Menu bar tingginya 25pt. Notch harus muat di situ biar nggak nutup tab browser.
@@ -244,7 +279,8 @@ final class IslandModel: ObservableObject {
         case .idle:
             if slim, !hovering { return IslandSize(width: 148, height: 6, radius: 3, shoulder: 3) }
             return compact(150 + bump)
-        case .music: return compact((timerRunning ? 268 : 248) + bump)
+        case .music: return compact(keepLyricWidth((timerRunning ? 268 : 248) + bump))
+        case .lyric: return compact(lyricWidth)
         case .timer: return compact(168 + bump)
         case .focus: return compact(250 + bump)
         case .flash(let f):

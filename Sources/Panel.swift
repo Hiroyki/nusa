@@ -292,6 +292,15 @@ private struct TopBar: View {
             if enabled { try? SMAppService.mainApp.unregister() } else { try? SMAppService.mainApp.register() }
         }
         menu.addItem(login)
+        let lyrics = NSMenuItem(title: "Lyrics · \(model.lyricMode.title)", action: nil, keyEquivalent: "")
+        let modes = NSMenu()
+        for mode in LyricMode.allCases {
+            let item = ActionItem(mode.title) { model.lyricMode = mode }
+            item.state = model.lyricMode == mode ? .on : .off
+            modes.addItem(item)
+        }
+        lyrics.submenu = modes
+        menu.addItem(lyrics)
         menu.addItem(.separator())
         menu.addItem(ActionItem("Quit Nusa") { NSApp.terminate(nil) })
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
@@ -368,6 +377,7 @@ private struct MusicColumn: View {
 
     var body: some View {
         if model.media.exists {
+            VStack(spacing: 8) {
             HStack(spacing: 13) {
                 ZStack(alignment: .bottomTrailing) {
                     Artwork(image: model.art, side: 100, radius: 16)
@@ -397,6 +407,8 @@ private struct MusicColumn: View {
                     progress
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            HomeLyric(model: model)
             }
         } else {
             VStack(spacing: 6) {

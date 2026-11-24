@@ -144,7 +144,7 @@ ipcMain.handle('asset', (_e, name) => {
   return fs.readFileSync(path.join(__dirname, 'app', 'assets', name), 'utf8');
 });
 ipcMain.on('media-cmd', (_e, cmd) => media.command(cmd));
-// Lirik baru dicari setelah halaman bilang fiturnya nyala (menu gear › Show lyrics)
+// Lirik baru dicari setelah halaman bilang fiturnya nyala (menu gear › Lyrics bukan Off)
 ipcMain.on('lyrics', (_e, on) => lyrics.enable(!!on));
 // Lokasi user (buat sholat, kiblat, cuaca); dipanggil pas nyala & tiap 30 menit kalau mode Current location
 ipcMain.handle('locate', () => location.locate().catch(() => null));

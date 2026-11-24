@@ -113,7 +113,14 @@ struct MusicTab: View {
     var body: some View {
         Group {
             // Senandung nggak jalan: pemutar dari app apa aja (Spotify, Apple Music, browser, ...), sama kayak versi Windows
-            if remote.online { senandung } else { SystemPlayer(model: model) }
+            if remote.online {
+                HStack(spacing: 14) {
+                    senandung
+                    if LyricsColumn.available(model) { LyricsColumn(model: model) }
+                }
+            } else {
+                SystemPlayer(model: model)
+            }
         }
         .onAppear { remote.start() }
         .onDisappear { remote.stop() }
@@ -203,14 +210,15 @@ private struct SystemPlayer: View {
 
     var body: some View {
         if model.media.exists {
-            HStack(spacing: 20) {
+            let lyrics = LyricsColumn.available(model)
+            HStack(spacing: lyrics ? 16 : 20) {
                 ZStack(alignment: .bottomTrailing) {
-                    Artwork(image: model.art, side: 200, radius: 20)
+                    Artwork(image: model.art, side: lyrics ? 132 : 200, radius: lyrics ? 16 : 20)
                         .shadow(color: .black.opacity(0.45), radius: 15, y: 10)
                     if let url = appURL {
                         Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
                             .resizable()
-                            .frame(width: 40, height: 40)
+                            .frame(width: lyrics ? 32 : 40, height: lyrics ? 32 : 40)
                             .offset(x: 7, y: 7)
                             .accessibilityHidden(true)
                     }
@@ -223,7 +231,7 @@ private struct SystemPlayer: View {
                         Text("\(model.media.playing ? "Playing" : "Paused") · \(name)".uppercased())
                             .font(.system(size: 10, weight: .bold)).tracking(1.1).foregroundStyle(mint).lineLimit(1)
                     }
-                    Text(model.media.title).font(.system(size: 20, weight: .semibold)).foregroundStyle(.white).lineLimit(1).padding(.top, 6)
+                    Text(model.media.title).font(.system(size: lyrics ? 16 : 20, weight: .semibold)).foregroundStyle(.white).lineLimit(1).padding(.top, 6)
                     Text(model.media.artist).font(.system(size: 13)).foregroundStyle(dim).lineLimit(1)
                     if !model.media.album.isEmpty {
                         Text(model.media.album).font(.system(size: 13)).foregroundStyle(dim).lineLimit(1)
@@ -237,10 +245,13 @@ private struct SystemPlayer: View {
                     .offset(x: -8)
                     .padding(.vertical, 8)
                     if model.media.duration > 0 { progress }
+                    LyricsNote(model: model)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                if lyrics { LyricsColumn(model: model) }
             }
-            .padding(.horizontal, 8)
+            .padding(.leading, 8)
+            .padding(.trailing, lyrics ? 0 : 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             VStack(spacing: 4) {

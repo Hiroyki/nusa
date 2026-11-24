@@ -138,6 +138,7 @@ struct IslandView: View {
         switch model.presentation {
         case .idle: IdleCarousel(model: model)
         case .music: CompactMusic(model: model)
+        case .lyric: CompactLyric(model: model)
         case .timer: CompactTimer(model: model)
         case .flash(.track): TrackPopup(model: model)
         case .flash(.prayer(let name, let time, let soon)): PrayerPopup(name: name, time: time, soon: soon)
@@ -327,7 +328,7 @@ private struct CompactTimer: View {
     }
 }
 
-private struct TimerRing: View {
+struct TimerRing: View {
     @ObservedObject var model: IslandModel
 
     var body: some View {

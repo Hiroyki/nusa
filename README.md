@@ -80,7 +80,7 @@ notch no matter which machine you're on.
 |:--:|---|---|:--:|:--:|:--:|
 | 🎵 | **Now Playing** | HD artwork, source-app icon, seek bar, click the cover to jump to the app | ✅ | ✅ | ✅ |
 | ▶️ | **Music** | Control whatever app is playing (Spotify, YouTube, Media Player…), or the Senandung queue + search | ✅ | ✅ | ✅ |
-| 🎤 | **Lyrics** | Live synced lyrics in the notch for whatever is playing — Spotify, Apple Music, YouTube, VLC… | ✅ | — | ✅ |
+| 🎤 | **Lyrics** | Live synced lyrics in the notch for whatever is playing — Spotify, Apple Music, YouTube, VLC… | ✅ | ✅ | ✅ |
 | ✅ | **Tasks** | Natural language: *"Rapat QC besok jam 9"*, *"Call Budi in 30 min"* | ✅ | ✅ | ✅ |
 | 🎯 | **Focus** | 25-minute focus sessions, breaks, sessions-today counter | ✅ | ✅ | ✅ |
 | 🕌 | **Prayer** | Prayer times (Kemenag criteria), qibla, adhan, 10-min reminder | ✅ | ✅ | ✅ |
@@ -183,14 +183,14 @@ Permissions (Calendar, Camera, Bluetooth) are only requested when a feature need
 | **Click** the notch | Opens the panel |
 | **Esc** / click away | Closes the panel |
 | **Right-click** the notch | Open at login · Quit |
-| **⚙ gear** (panel) | Theme · Show lyrics · Start at login · Quit |
+| **⚙ gear** (panel) | Theme · Lyrics · Start at login · Quit |
 | **📍 city chip** (Prayer tab) | *Current location* or pick a city |
 | **Two-finger swipe** left/right on the notch | Previous / next track |
 | **Drag files** onto the notch | Saves them in **Tray** — drag them out to use |
 | **Drag the progress bar** | Seek through the track |
 | **Click a lyric line** (Music tab) | Jumps to that part of the song |
 | **− / +** above the lyrics | Shifts lyrics earlier / later, remembered per app |
-| **⚙ gear → Show lyrics** | Turns lyrics on or off |
+| **⚙ gear → Lyrics** | When the notch shows lyrics: *Always*, *On hover*, *On click* (panel only) or *Off* |
 | **Drag the volume bar** | Change system volume |
 | **Click the album art** | Jumps to the app that's playing |
 | **Click the weather chip** | Hourly forecast |
@@ -208,7 +208,7 @@ settings never leave it. Nusa only talks to the network for these:
 | City name | [BigDataCloud](https://www.bigdatacloud.com/free-api/free-reverse-geocode-to-city-api) | Coordinates rounded to ~1 km |
 | Weather | [Open-Meteo](https://open-meteo.com) | Coordinates of your city |
 | HD album art | iTunes Search | Song title + artist |
-| Lyrics | [LRCLIB](https://lrclib.net) | Song title, artist + length (nothing when *Show lyrics* is off) |
+| Lyrics | [LRCLIB](https://lrclib.net) | Song title, artist + length (nothing when Lyrics is *Off*) |
 | Quran audio | islamic.network CDN | Which ayah you play |
 
 Don't want auto-location? Pick a city from the 📍 chip in the Prayer tab and Nusa stops asking.
@@ -349,9 +349,8 @@ It fades out of the way when a screen-recording toolbar or a share bar appears i
 - [x] Windows / macOS / Linux desktop apps
 - [x] Themes — 11 built-in
 - [x] Automatic location for prayer times & weather (Windows & Linux)
-- [x] Synced lyrics in the notch (Windows & Linux)
+- [x] Synced lyrics in the notch
 - [ ] Automatic location on the native macOS app
-- [ ] Lyrics on the native macOS app
 - [ ] Themes on the native macOS app
 - [ ] Search any city worldwide
 - [ ] Code-signed installers
@@ -371,7 +370,7 @@ Ideas, bug reports and PRs are all welcome!
 <summary><b>Latest — lyrics, location & music</b></summary>
 
 - 🎤 **Lyrics** — the line being sung shows in the notch, and the whole song in the Music tab (click a line to jump there).
-  Works with any app Nusa can see playing; turn it off from ⚙ → *Show lyrics*.
+  Works with any app Nusa can see playing; choose when they appear from ⚙ → *Lyrics*.
 - 📍 **Automatic location** — prayer times, qibla and weather follow where you are (Windows Location, with an IP
   fallback). Pick a city any time from the 📍 chip; *Current location* is the new default.
 - ⏭️ **Snappier music controls** — Next / Previous / Play / Seek respond instantly, even when you click several times

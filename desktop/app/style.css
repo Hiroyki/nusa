@@ -325,3 +325,8 @@ input, select { font: inherit; color: #fff; }
 .lyr-list p.gap { height: 8px; padding: 0; pointer-events: none; }
 .lyr-list.seek p { cursor: pointer; }
 .lyr-list.seek p:hover { background: rgba(255, 255, 255, .06); }
+
+/* lirik: baris sekarang di Home (nggak makan tempat kalau nggak ada lirik) */
+.homelyr:empty { display: none; }
+.homelyr { margin-top: 8px; min-height: 17px; font-size: 12px; font-weight: 600; text-align: center; overflow: hidden; }
+.homelyr > span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: lyrIn .34s var(--soft) both; }

@@ -1,4 +1,4 @@
-// node test/run.js — cek jadwal sholat & pembaca tugas
+// node test/run.js — cek jadwal sholat, pembaca tugas & lirik
 require('../app/lib/prayer.js');
 require('../app/lib/tasks.js');
 const { Prayer, TaskParser } = globalThis;
@@ -50,4 +50,54 @@ for (const [input, title, due] of [
   const r = TaskParser.parse(input, now);
   ok(`"${input}"`, r.title === title && fmt(r.due) === due, `-> "${r.title}" @ ${fmt(r.due)}`);
 }
-process.exit(fail ? 1 : 0);
+
+// Lirik (tanpa internet: server-nya dipalsuin)
+const Lyrics = require('../lyrics.js');
+const { splitArtist, ownClock } = require('../media.js');
+const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+ok('LRC: waktu ganda, waktu per kata, offset', eq(Lyrics.parseLRC('[ar:X]\n[offset:+500]\n[00:10.50][01:00.5]<00:10.50>Halo <00:11.00>dunia\n[00:20.00]\nbukan lirik'),
+  [{ t: 10, text: 'Halo dunia' }, { t: 19.5, text: '' }, { t: 60, text: 'Halo dunia' }]));
+ok('judul: embel-embel dibuang, versi dibiarin', eq(['Yellow (Official Video)', 'Bohemian Rhapsody - Remastered 2011', 'Komang (Live)', 'Peaches (feat. Daniel Caesar)', 'Stay With Me'].map(Lyrics.cleanTitle),
+  ['Yellow', 'Bohemian Rhapsody', 'Komang (Live)', 'Peaches', 'Stay With Me']));
+ok('judul YouTube "Artis - Judul"', Lyrics.readings({ title: 'NOAH - Separuh Aku (Official Music Video)', artist: 'Musica Studios' }).some((r) => r.artist === 'NOAH' && r.title === 'Separuh Aku'));
+ok('Apple Music: artis & album dipisah', eq(splitArtist({ app: 'Apple Music', artist: 'Tulus — Manusia', album: '' }), { app: 'Apple Music', artist: 'Tulus', album: 'Manusia' })
+  && splitArtist({ app: 'Spotify', artist: 'A — B', album: '' }).artist === 'A — B');
+
+const rec = (trackName, artistName, duration, o = {}) => ({ trackName, artistName, duration, syncedLyrics: '[00:01.00]la la', plainLyrics: 'la la', ...o });
+const pickOne = (list, m) => Lyrics.pick(list, Lyrics.readings(m), m.duration);
+ok('artis lain ditolak', pickOne([rec('Home', 'Edward Sharpe', 200)], { title: 'Home', artist: 'Michael Bublé', duration: 200 }) === null);
+ok('aksen & VEVO tetap cocok', !!pickOne([rec('Déjà Vu', 'Beyoncé', 240)], { title: 'Deja Vu', artist: 'BeyonceVEVO', duration: 240 })?.synced);
+ok('durasi beda jauh → nggak disinkronin', eq(((r) => [r.synced, r.plain])(pickOne([rec('Yellow', 'Coldplay', 267)], { title: 'Yellow', artist: 'Coldplay', duration: 300 })), [null, 'la la']));
+ok('versi live nggak pakai waktu studio', pickOne([rec('Yellow', 'Coldplay', 267)], { title: 'Yellow (Live)', artist: 'Coldplay', duration: 267 })?.synced === null);
+ok('tanpa artis: cuma yang persis', pickOne([rec('Intro', 'X', 120)], { title: 'Intro', artist: '', duration: 128 }) === null);
+
+const ck = ownClock();
+const first = ck({ source: 'a', title: '1', artist: '', playing: true }), second = ck({ source: 'a', title: '2', artist: '', playing: true });
+ok('posisi sendiri: cuma kalau liat lagunya mulai', first.noClock === true && second.noClock === false && second.position === 0);
+
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+(async () => {
+  const calls = [], seen = [];
+  const fetchFn = async (url) => { calls.push(url); return { status: 200, ok: true, json: async () => rec(new URL(url).searchParams.get('track_name'), 'A', 100) }; };
+  const ly = Lyrics.create((l) => seen.push(l && l.state + ':' + l.key.split('\n')[0]), { fetchFn, delay: 20, retry: 20 });
+  ly.track({ title: 'Satu', artist: 'A', duration: 100 });
+  await wait(50);
+  ok('lirik mati: nggak nyentuh internet', calls.length === 0 && seen.length === 0);
+  ly.enable(true);
+  for (const t of ['Dua', 'Tiga', 'Empat']) ly.track({ title: t, artist: 'A', duration: 100 }); // Next dipencet cepat
+  await wait(80);
+  ok('Next berkali-kali: cuma lagu terakhir yang dicari', calls.length === 1 && seen.at(-1) === 'ok:Empat');
+  for (let i = 0; i < 5; i++) ly.track({ title: 'Empat', artist: 'A', duration: 100.4 });
+  await wait(50);
+  ok('lagu sama: nggak dicari lagi', calls.length === 1);
+  ly.track(null);
+  ok('berhenti: lirik dibersihin', seen.at(-1) === null);
+
+  let broken = true;
+  const flaky = Lyrics.create((l) => seen.push(l && l.state), { delay: 5, retry: 20, fetchFn: async (u) => { if (broken) { broken = false; throw new Error('offline'); } return fetchFn(u); } });
+  flaky.enable(true);
+  flaky.track({ title: 'Lima', artist: 'A', duration: 100 });
+  await wait(90);
+  ok('internet putus: dicoba lagi', eq(seen.slice(-3), ['loading', 'error', 'ok']));
+  process.exit(fail ? 1 : 0);
+})();

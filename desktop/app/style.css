@@ -296,3 +296,32 @@ input, select { font: inherit; color: #fff; }
 .sbtn:hover { background: rgba(255,255,255,.17); }
 .sbtn:active { transform: scale(.93); }
 .ev.done span, .ev.done em { color: var(--faint); }
+
+/* lirik: satu baris di notch */
+.compact .lyr { flex: 1; min-width: 0; overflow: hidden; text-align: center; font-size: 12px; line-height: 18px; }
+.compact .lyr > span { display: inline-block; white-space: nowrap; animation: lyrIn .34s var(--soft) both; }
+.compact .lyr > span.run { animation: lyrIn .34s var(--soft) both, lyrRun var(--dur) linear .5s both; }
+.compact .lyr > span.run.rtl { animation-direction: normal, reverse; }
+@keyframes lyrIn { from { opacity: 0; translate: 0 9px; filter: blur(3px); } }
+@keyframes lyrRun { from { transform: none; } to { transform: translateX(var(--over)); } }
+
+/* lirik: kolom di tab Music */
+.mwrap { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.lyrwrap { display: contents; }
+.lyrcol { width: 320px; min-height: 0; flex: none; align-self: stretch; }
+.np.big.haslyr { gap: 16px; padding-right: 0; min-height: 0; }
+.np.big.haslyr .cover { width: 132px; height: 132px; border-radius: 16px; }
+.np.big.haslyr b { font-size: 16px; }
+.np.big.haslyr .appic { width: 32px; height: 32px; }
+.np.big.haslyr .vline { margin: 0; align-self: stretch; }
+.np.big small.lyr-note { font-size: 11px; color: var(--faint); margin-top: 8px; }
+.lyr-head { display: flex; align-items: center; gap: 6px; flex: none; height: 24px; }
+.lyr-off { font-size: 10.5px; color: var(--faint); min-width: 42px; text-align: center; }
+.lyr-list { position: relative; padding: 6px 4px 60px 0; -webkit-mask-image: linear-gradient(transparent, #000 18px, #000 calc(100% - 34px), transparent); }
+.lyr-list p { margin: 0; padding: 4px 6px; border-radius: 8px; font-size: 14px; line-height: 1.35; font-weight: 600; color: var(--dim); transition: color .25s; }
+.lyr-list:not(.sync) p { font-weight: 400; font-size: 13px; padding: 2px 6px; }
+.lyr-list.sync p { color: var(--faint); }
+.lyr-list.sync p.on { color: var(--text); }
+.lyr-list p.gap { height: 8px; padding: 0; pointer-events: none; }
+.lyr-list.seek p { cursor: pointer; }
+.lyr-list.seek p:hover { background: rgba(255, 255, 255, .06); }

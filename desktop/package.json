@@ -32,6 +32,7 @@
       "main.js",
       "preload.js",
       "media.js",
+      "lyrics.js",
       "audio.js",
       "calendar.js",
       "location.js",

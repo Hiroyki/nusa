@@ -7,6 +7,7 @@ const media = require('./media');
 const audio = require('./audio');
 const calendar = require('./calendar');
 const location = require('./location');
+const lyrics = require('./lyrics').create((l) => send('lyrics', l));
 
 const W = 840, H = 440;
 let win = null, tray = null;
@@ -76,6 +77,7 @@ function create() {
     }
     current = s;
     send('media', s);
+    lyrics.track(s);
   });
 
   // Volume sistem; pindah ke headphone/Bluetooth → pop-up nama perangkat + baterainya
@@ -142,6 +144,8 @@ ipcMain.handle('asset', (_e, name) => {
   return fs.readFileSync(path.join(__dirname, 'app', 'assets', name), 'utf8');
 });
 ipcMain.on('media-cmd', (_e, cmd) => media.command(cmd));
+// Lirik baru dicari setelah halaman bilang fiturnya nyala (menu gear › Show lyrics)
+ipcMain.on('lyrics', (_e, on) => lyrics.enable(!!on));
 // Lokasi user (buat sholat, kiblat, cuaca); dipanggil pas nyala & tiap 30 menit kalau mode Current location
 ipcMain.handle('locate', () => location.locate().catch(() => null));
 ipcMain.on('volume', (_e, level) => audio.setVolume(level));

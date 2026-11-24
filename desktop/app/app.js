@@ -62,6 +62,8 @@ const S = {
   audio: null, shelf: LS.get('shelf', []), files: {}, dropping: false, calSel: null, mirror: null, scrub: null,
   cal: { status: 'loading', events: [], at: 0 },
   theme: LS.get('theme', 'classic'),
+  // Lirik: hasil terakhir dari proses utama, nyala/mati, dan geseran waktu per app (detik)
+  lyrics: null, lyrOn: LS.get('lyrics', true), lyrOffset: LS.get('lyrOffset', {}),
 };
 let flashTimer = null;
 
@@ -70,7 +72,7 @@ let flashTimer = null;
 function presentation() {
   if (S.expanded) return 'expanded';
   if (S.flash) return 'flash';
-  if (!S.hover) return 'lip';
+  if (!S.hover) return lyricOn() ? 'lyric' : 'lip';
   if (S.focus) return 'focus';
   if (S.media?.title) return 'music';
   if (S.timer) return 'timer';
@@ -80,12 +82,21 @@ function presentation() {
 const panelHeight = () => ({ prayer: 204, quran: 400, music: 330, tasks: 330 }[S.tab] || 190);
 
 function size(p = presentation()) {
+  const sz = baseSize(p);
+  // Kursor masuk pas lirik tampil: notch-nya nggak boleh lebih kecil dari liriknya. Kalau mengecil,
+  // kursor di pinggir jadi "keluar" → lirik melebar lagi → masuk lagi → kedip terus.
+  if (['idle', 'music', 'timer', 'focus'].includes(p) && lyricOn()) { const l = baseSize('lyric'); return { ...sz, w: Math.max(sz.w, l.w), h: Math.max(sz.h, l.h) }; }
+  return sz;
+}
+
+function baseSize(p) {
   const bump = 12;
   const c = (w) => ({ w: w + bump, h: 24, r: 9, s: 7 });
   switch (p) {
     case 'lip': return { w: 150, h: 6, r: 3, s: 3 };
     case 'idle': return c(150);
     case 'music': return c(S.timer ? 268 : 248);
+    case 'lyric': return { w: Math.min(LYR_MAX, Math.max(220, lyricWidth() + lyricChrome())), h: 26, r: 10, s: 7 };
     case 'timer': return c(168);
     case 'focus': return c(250);
     case 'flash': {
@@ -154,6 +165,12 @@ function build(p) {
   if (p === 'lip') return '';
   if (p === 'flash') return flashHTML(S.flash);
   if (p === 'expanded') return panelHTML();
+  if (p === 'lyric') {
+    const m = S.media;
+    const art = m.art || m.hiArt;
+    return `${art ? `<img class="art" src="${esc(art)}" alt="">` : `<span class="art"></span>`}<span class="lyr" data-live="lyric"></span>
+      <span class="eq on"><i></i><i></i><i></i><i></i></span>${S.timer ? ringSVG('timer') : ''}`;
+  }
   if (p === 'music') {
     const m = S.media;
     return `${m.art ? `<img class="art" src="${esc(m.art)}" alt="">` : `<span class="art"></span>`}<span class="t">${esc(m.title)}</span>
@@ -172,7 +189,7 @@ function afterBuild(p) {
   if (p !== 'expanded') return;
   if (S.tab === 'quran') scrollQuran(false);
   if (S.tab === 'home' && Date.now() - S.cal.at > 60000) loadCalendar();
-  if (S.tab === 'music') { musicPoll(); $('#musicQ')?.focus(); }
+  if (S.tab === 'music') { musicPoll(); lyrPaint(false); $('#musicQ')?.focus(); }
   if (S.tab === 'tasks') $('#taskIn')?.focus();
 }
 
@@ -375,20 +392,22 @@ function musicHTML() {
       ? `<span class="label">${mu.query.trim() ? 'Results' : 'Up next'}</span><div class="scroll" style="margin-top:4px">${rows.map((s, k) => songRow(s, k, !mu.query.trim())).join('')}</div>`
       : `<div class="note">${IC.music}<span>${mu.query.trim() ? 'No songs found.' : 'Nothing queued in Senandung yet.'}</span></div>`;
   }
-  return `<div class="col" style="flex:1;gap:10px">${head}${list}</div>`;
+  return `<div class="mwrap"><div class="col" style="flex:1;gap:10px">${head}${list}</div><div class="lyrwrap" id="lyrCol">${lyricsHTML()}</div></div>`;
 }
 
 function systemPlayerHTML() {
   const m = S.media;
   if (!m?.title) return `<div class="note">${IC.music}<b>Nothing playing</b><span>Play something in Spotify, YouTube, or any music app — it’ll show up here.</span></div>`;
   const timeline = m.duration && !m.noTimeline;
-  return `<div class="np big">${coverHTML(m)}
+  const col = lyricsHTML();
+  return `<div class="np big ${col ? 'haslyr' : ''}">${coverHTML(m)}
     <div class="col" style="flex:1;min-width:0">
       ${m.app ? `<span class="label">${m.playing ? 'Playing' : 'Paused'} · ${esc(m.app)}</span>` : ''}
       <b>${esc(m.title)}</b><small>${esc(m.artist)}</small>${m.album ? `<small>${esc(m.album)}</small>` : ''}
       <div class="ctl"><button data-act="mprev" title="Previous">${IC.prev}</button><button class="main" data-act="mtoggle" title="Play/Pause">${m.playing ? IC.pause : IC.play}</button><button data-act="mnext" title="Next">${IC.next}</button></div>
       ${timeline ? `<div class="bar ${seekable(m) ? 'seek' : ''}" data-live="mbar"></div><div class="times mono" data-live="mtime"></div>` : ''}
-    </div></div>`;
+      ${lyricsNote()}
+    </div>${col}</div>`;
 }
 
 function songRow(s, k, queue) {
@@ -440,8 +459,12 @@ function refreshBody() {
     tmp.innerHTML = html;
     const fresh = tmp.firstElementChild;
     // Kolom cari yang lama dipertahanin biar ketikan & fokus nggak ilang
-    if (field && fresh.firstElementChild?.classList.contains('field')) fresh.replaceChild(field, fresh.firstElementChild);
+    const slot = $('.field', fresh);
+    if (field && slot) slot.replaceWith(field);
+    const top = $('#lyr')?.scrollTop;
     body.replaceChildren(fresh);
+    if (top && $('#lyr')) $('#lyr').scrollTop = top;
+    lyrPaint(false);
     live();
   } else if (S.tab === 'tasks') {
     const list = $('#taskList');
@@ -761,7 +784,7 @@ function menuHTML() {
     + `<div class="h">Reciter</div>` + RECITERS.map(([id, n]) => item(n, 'reciter', { r: id }, LS.get('reciter', 'ar.alafasy') === id)).join('');
   if (m.type === 'theme') body = BUILTIN_THEMES.map((t) => item(t.name, 'theme', { id: t.id }, t.id === S.theme)).join('');
   if (m.type === 'gear') body = item(`Theme · ${themeById(S.theme).name}`, 'themeMenu', {}, false)
-    + `<div class="h"></div>` + item('Start at login', 'login', {}, m.login) + item('Quit Nusa', 'quit', {}, false);
+    + item('Show lyrics', 'lyrToggle', {}, S.lyrOn) + `<div class="h"></div>` + item('Start at login', 'login', {}, m.login) + item('Quit Nusa', 'quit', {}, false);
   if (m.type === 'wx' && S.weather) body = `<div class="h">${esc(S.place.name)} · ${wxLabel(S.weather.code)} · feels ${Math.round(S.weather.feels)}°</div>`
     + S.weather.hours.filter((h) => h.time > Date.now() - 1800000).map((h) => `<button>${hhmm(new Date(h.time), S.place.tz)}  ${Math.round(h.temp)}°  rain ${h.rain}%</button>`).join('') + `<div class="h">Data: Open-Meteo</div>`;
   return `<div class="menu" style="left:${m.x}px;top:${m.y}px">${body}</div>`;
@@ -840,6 +863,118 @@ function startTimer(m) {
   render(true);
 }
 
+/* ================= lirik ================= */
+// Yang nyari liriknya proses utama (lyrics.js). Di sini: baris yang lagi dinyanyiin → notch & tab Music.
+
+const LYR_MAX = 480;
+const LYR_GAP = 6; // baris kosong di bawah ini (detik) = jeda napas, bukan bagian instrumental
+const LYR_LEAD = 0.15; // muncul sedikit lebih awal, biar pas sama animasinya
+const lyrKey = (m) => (m?.title ? `${m.title}\n${m.artist || ''}` : null);
+/** Hasil buat lagu yang lagi diputar (bukan sisa lagu sebelumnya). */
+const lyrNow = () => (S.lyrOn && S.lyrics && S.lyrics.key === lyrKey(S.media) ? S.lyrics : null);
+/** Baris-baris yang jalan bareng lagu; null kalau nggak ada / posisi lagunya nggak ketauan. */
+const lyrLines = () => { const l = lyrNow(); return l?.state === 'ok' && !S.media.noClock ? l.synced || null : null; };
+const lyrApp = () => S.media?.app || S.media?.source || '';
+const lyrShift = () => S.lyrOffset[lyrApp()] || 0;
+/** Notch nampilin lirik: lagunya lagi jalan dan nggak lagi sesi fokus. */
+const lyricOn = () => !!(S.media?.playing && S.focus?.phase !== 'focus' && lyrLines());
+
+let lyrIdx = -1, lyrFor = null, lyrTimer = null, lyrTouched = 0;
+
+/** Cari baris sekarang, perbarui kalau ganti, terus tidur sampai baris berikutnya. */
+function lyrTick() {
+  clearTimeout(lyrTimer);
+  const lines = lyrLines();
+  if (lines !== lyrFor) { lyrFor = lines; lyrIdx = -1; }
+  if (!lines) return;
+  const pos = mediaPos() + lyrShift() + LYR_LEAD;
+  let i = -1;
+  while (i + 1 < lines.length && lines[i + 1].t <= pos) i++;
+  // Laporan posisi dari app suka mundur dikit; jangan sampai barisnya bolak-balik
+  if (i === lyrIdx - 1 && lines[lyrIdx].t - pos < 0.8) i = lyrIdx;
+  if (i !== lyrIdx) { lyrIdx = i; render(); lyrPaint(true); }
+  if (S.media.playing) {
+    const next = lines[i + 1];
+    lyrTimer = setTimeout(lyrTick, next ? Math.max(30, Math.min(1000, (next.t - pos) * 1000 + 15)) : 1000);
+  }
+}
+
+/** Baris buat notch. Jeda pendek: baris tadi ditahan; jeda panjang: ♪. Sebelum baris pertama: judul lagu. */
+function lyricLine() {
+  const lines = lyrLines();
+  if (!lines) return null;
+  let i = Math.min(lyrIdx, lines.length - 1);
+  if (i < 0) return { i: -1, text: [S.media.title, S.media.artist].filter(Boolean).join(' · '), len: 0 };
+  const len = (lines[i + 1]?.t ?? lines[i].t + 8) - lines[i].t;
+  if (!lines[i].text && len < LYR_GAP) while (i > 0 && !lines[i].text) i--;
+  return { i, text: lines[i].text || '♪', len };
+}
+
+const measure = document.createElement('canvas').getContext('2d');
+const lyricChrome = () => 6 + 16 + 8 + 8 + 16 + 11 + (S.timer ? 21 : 0); // sampul, jarak, equalizer, cincin timer
+function lyricWidth() {
+  measure.font = `600 12px ${getComputedStyle(document.body).fontFamily}`;
+  return Math.ceil(measure.measureText(lyricLine()?.text || '').width) + 4;
+}
+
+function lyricHTML() {
+  const l = lyricLine();
+  if (!l) return '';
+  // Baris kepanjangan: jalan pelan ke ujung selama barisnya dinyanyiin
+  const over = lyricWidth() + lyricChrome() - LYR_MAX;
+  const run = over > 0 ? ` class="run${/[֐-ࣿ]/.test(l.text) ? ' rtl' : ''}" style="--over:${-over}px;--dur:${Math.max(1, Math.min(6, (l.len || 6) - 1.2)).toFixed(1)}s"` : '';
+  return `<span data-i="${l.i}" dir="auto"${run}>${esc(l.text)}</span>`;
+}
+
+/** Keterangan kecil di bawah pemutar kalau nggak ada kolom lirik. */
+function lyricsNote() {
+  const l = lyrNow();
+  const text = !l ? '' : l.state === 'loading' ? 'Finding lyrics…' : l.state === 'none' ? 'No lyrics found' : l.state === 'error' ? 'Couldn’t load lyrics'
+    : l.instrumental ? 'Instrumental' : '';
+  return text ? `<small class="lyr-note">${text}</small>` : '';
+}
+
+/** Kolom lirik di tab Music; '' kalau nggak ada lirik. */
+function lyricsHTML() {
+  const l = lyrNow();
+  if (l?.state !== 'ok' || !(l.synced || l.plain)) return '';
+  const lines = lyrLines();
+  const seek = lines && seekable(S.media);
+  const shift = lyrShift();
+  const rows = lines
+    ? lines.map((x, i) => !x.text && (lines[i + 1]?.t ?? Infinity) - x.t < LYR_GAP ? `<p class="gap"></p>` : `<p dir="auto" data-i="${i}"${seek ? ` data-act="lyrSeek" data-t="${x.t}"` : ''}>${esc(x.text) || '♪'}</p>`).join('')
+    : (l.plain || l.synced.map((x) => x.text).join('\n')).split('\n').map((x) => `<p dir="auto">${esc(x) || '&nbsp;'}</p>`).join('');
+  const sync = lines ? `<button class="small-btn" data-act="lyrSync" data-d="-0.25" title="Lyrics too early">−</button>
+    <span class="mono lyr-off">${shift > 0 ? '+' : ''}${shift ? shift + 's' : 'In sync'}</span><button class="small-btn" data-act="lyrSync" data-d="0.25" title="Lyrics too late">+</button>` : '<span class="lyr-off">Not synced</span>';
+  return `<div class="vline"></div><div class="col lyrcol"><div class="lyr-head"><span class="label">Lyrics</span><span class="sp"></span>${sync}</div>
+    <div class="scroll lyr-list ${lines ? 'sync' : ''} ${seek ? 'seek' : ''}" id="lyr">${rows}</div></div>`;
+}
+
+/** Tandain baris yang lagi jalan & gulir ke situ (kecuali user baru aja gulir sendiri). */
+function lyrPaint(smooth) {
+  const list = $('#lyr');
+  if (!list?.classList.contains('sync')) return;
+  const now = list.children[lyricLine()?.i];
+  for (const p of list.children) p.classList.toggle('on', p === now);
+  if (Date.now() - lyrTouched < 4000) return;
+  list.scrollTo({ top: now ? now.offsetTop - list.clientHeight / 2 + now.offsetHeight / 2 : 0, behavior: smooth ? 'smooth' : 'instant' });
+}
+document.addEventListener('wheel', (e) => { if (e.target.closest('#lyr')) lyrTouched = Date.now(); }, { passive: true });
+
+/** Kolom lirik berubah; daftar & kolom cari Senandung jangan ikut dibangun ulang. */
+function lyrRefresh() {
+  if (!S.expanded || S.tab !== 'music') return;
+  const col = $('#lyrCol');
+  if (col) { col.innerHTML = lyricsHTML(); lyrPaint(false); } else refreshBody();
+}
+
+nusa.on('lyrics', (l) => {
+  S.lyrics = l;
+  lyrTick();
+  render();
+  lyrRefresh();
+});
+
 /* ================= bagian yang diperbarui tiap detik ================= */
 
 const LIVE = {
@@ -850,7 +985,7 @@ const LIVE = {
   mbar: () => { const m = S.media; if (!m?.duration) return ''; return `<i style="width:${Math.min(100, (S.scrub ?? mediaPos()) / m.duration * 100)}%"></i>`; },
   mtime: () => { const m = S.media; if (!m?.duration) return ''; return `<span>${clock(Math.min(S.scrub ?? mediaPos(), m.duration))}</span><span>${clock(m.duration)}</span>`; },
   volLevel: () => S.audio ? `<i style="width:${(S.audio.muted ? 0 : S.audio.vol) * 100}%"></i>` : '',
-  volFlash: volFlashHTML,
+  volFlash: volFlashHTML, lyric: lyricHTML,
   agenda: agendaHTML, wxCard: wxCardHTML, prTop: prTopHTML, prTrack: prTrackHTML,
   prMarks: () => { const t = Prayer.times(S.place, new Date()); return `Imsak ${hhmm(t[0].date, S.place.tz)} · Sunrise ${hhmm(t[2].date, S.place.tz)}`; },
 };
@@ -909,12 +1044,13 @@ nusa.on('media', (st) => {
   // Posisi lagu jalan sendiri lewat live() tiap detik. Bangun ulang isi cuma kalau lagu/statusnya beneran berubah;
   // kalau tiap laporan dibangun ulang, animasi masuknya keulang terus dan panel kelihatan geter & kedip.
   const changed = mediaSig(before) !== mediaSig(st);
+  lyrTick();
   if (newTrack && !S.expanded && S.focus?.phase !== 'focus') showFlash({ kind: 'track' }, 2.6);
   else if (lastKey === 'x:music') {
     if (!S.music.online && changed) refreshBody();
     render();
   }
-  else render(changed && (lastKey === 'music' || lastKey === 'x:home'));
+  else render(changed && (lastKey === 'music' || lastKey === 'lyric' || lastKey === 'x:home'));
 });
 
 const mediaSig = (x) => JSON.stringify(x && [x.title, x.artist, x.album, x.art, x.hiArt, x.icon, x.app, x.playing, x.canSeek, x.noTimeline, Math.round(x.duration || 0)]);
@@ -957,7 +1093,7 @@ document.addEventListener('pointerdown', (e) => {
   const bar = e.target.closest('.bar.seek');
   if (bar && seekable(S.media)) {
     const dur = S.media.duration;
-    dragOn(bar, (f) => { S.scrub = f * dur; live(); }, (f) => { nusa.media(`seek ${(f * dur).toFixed(2)}`); S.media = { ...S.media, position: f * dur, at: Date.now() }; S.scrub = null; live(); })(e);
+    dragOn(bar, (f) => { S.scrub = f * dur; live(); }, (f) => { nusa.media(`seek ${(f * dur).toFixed(2)}`); S.media = { ...S.media, position: f * dur, at: Date.now() }; S.scrub = null; live(); lyrTick(); })(e);
     return;
   }
   const vt = e.target.closest('#volTrack');
@@ -1099,6 +1235,20 @@ document.addEventListener('click', (e) => {
     gear: async () => openMenu('gear', el, { login: await nusa.loginItem() }),
     login: async () => { await nusa.loginItem(!S.menu?.login); S.menu = null; render(true); },
     quit: () => window.close(),
+    lyrToggle: () => { S.lyrOn = !S.lyrOn; LS.set('lyrics', S.lyrOn); nusa.lyrics(S.lyrOn); S.menu = null; lyrTick(); render(true); },
+    lyrSeek: () => {
+      const t = Math.max(0, +d.t - lyrShift());
+      nusa.media(`seek ${t.toFixed(2)}`);
+      S.media = { ...S.media, position: t, at: Date.now() };
+      lyrTouched = 0; live(); lyrTick();
+    },
+    lyrSync: () => {
+      const v = Math.max(-10, Math.min(10, lyrShift() + +d.d));
+      S.lyrOffset = { ...S.lyrOffset, [lyrApp()]: v };
+      LS.set('lyrOffset', S.lyrOffset);
+      const o = $('.lyr-off'); if (o) o.textContent = v ? `${v > 0 ? '+' : ''}${v}s` : 'In sync';
+      lyrTick();
+    },
     themeMenu: () => openMenu('theme', el),
     theme: () => { S.theme = d.id; LS.set('theme', d.id); applyTheme(); S.menu = null; render(true); },
     timer: () => startTimer(+d.m), timerStop: () => { clearTimeout(timerDone); S.timer = null; render(true); },
@@ -1185,6 +1335,7 @@ loadWeather();
 locateUser();
 setInterval(locateUser, 30 * 60000);
 render(true);
+nusa.lyrics(S.lyrOn);
 
 // Pengait buat tes otomatis (dipakai mode potret pas development)
-window.__nusa = { S, render, showFlash, startFocus, startTimer, recite, loadQuran, applyTheme, BUILTIN_THEMES };
+window.__nusa = { S, render, showFlash, startFocus, startTimer, recite, loadQuran, applyTheme, BUILTIN_THEMES, lyrTick, lyricLine };

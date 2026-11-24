@@ -80,6 +80,7 @@ notch no matter which machine you're on.
 |:--:|---|---|:--:|:--:|:--:|
 | 🎵 | **Now Playing** | HD artwork, source-app icon, seek bar, click the cover to jump to the app | ✅ | ✅ | ✅ |
 | ▶️ | **Music** | Control whatever app is playing (Spotify, YouTube, Media Player…), or the Senandung queue + search | ✅ | ✅ | ✅ |
+| 🎤 | **Lyrics** | Live synced lyrics in the notch for whatever is playing — Spotify, Apple Music, YouTube, VLC… | ✅ | — | ✅ |
 | ✅ | **Tasks** | Natural language: *"Rapat QC besok jam 9"*, *"Call Budi in 30 min"* | ✅ | ✅ | ✅ |
 | 🎯 | **Focus** | 25-minute focus sessions, breaks, sessions-today counter | ✅ | ✅ | ✅ |
 | 🕌 | **Prayer** | Prayer times (Kemenag criteria), qibla, adhan, 10-min reminder | ✅ | ✅ | ✅ |
@@ -182,11 +183,14 @@ Permissions (Calendar, Camera, Bluetooth) are only requested when a feature need
 | **Click** the notch | Opens the panel |
 | **Esc** / click away | Closes the panel |
 | **Right-click** the notch | Open at login · Quit |
-| **⚙ gear** (panel) | Theme · Start at login · Quit |
+| **⚙ gear** (panel) | Theme · Show lyrics · Start at login · Quit |
 | **📍 city chip** (Prayer tab) | *Current location* or pick a city |
 | **Two-finger swipe** left/right on the notch | Previous / next track |
 | **Drag files** onto the notch | Saves them in **Tray** — drag them out to use |
 | **Drag the progress bar** | Seek through the track |
+| **Click a lyric line** (Music tab) | Jumps to that part of the song |
+| **− / +** above the lyrics | Shifts lyrics earlier / later, remembered per app |
+| **⚙ gear → Show lyrics** | Turns lyrics on or off |
 | **Drag the volume bar** | Change system volume |
 | **Click the album art** | Jumps to the app that's playing |
 | **Click the weather chip** | Hourly forecast |
@@ -204,6 +208,7 @@ settings never leave it. Nusa only talks to the network for these:
 | City name | [BigDataCloud](https://www.bigdatacloud.com/free-api/free-reverse-geocode-to-city-api) | Coordinates rounded to ~1 km |
 | Weather | [Open-Meteo](https://open-meteo.com) | Coordinates of your city |
 | HD album art | iTunes Search | Song title + artist |
+| Lyrics | [LRCLIB](https://lrclib.net) | Song title, artist + length (nothing when *Show lyrics* is off) |
 | Quran audio | islamic.network CDN | Which ayah you play |
 
 Don't want auto-location? Pick a city from the 📍 chip in the Prayer tab and Nusa stops asking.
@@ -219,6 +224,7 @@ On Windows you can also turn it off in **Settings → Privacy & security → Loc
 | Prayer times | **PrayTimes.org** algorithm with Kemenag RI criteria |
 | Weather | **[Open-Meteo](https://open-meteo.com)** |
 | Location | **Windows.Devices.Geolocation** (WinRT) · IP fallback · BigDataCloud reverse-geocode |
+| Lyrics | **[LRCLIB](https://lrclib.net)** — no account or API key |
 | Media control | **Windows SMTC** (WinRT) · MPRIS / `playerctl` on Linux |
 | Icons | Hand-drawn SVG — no icon-font dependency |
 
@@ -226,7 +232,7 @@ On Windows you can also turn it off in **Settings → Privacy & security → Loc
 
 | 🖥️ Platforms | 🎨 Themes | ✨ Features | 📖 Surahs | 🔑 Accounts |
 |:---:|:---:|:---:|:---:|:---:|
-| **3** | **11** built-in | **14** | **114** | **0** |
+| **3** | **11** built-in | **15** | **114** | **0** |
 
 ## 🛠️ Build from source
 
@@ -248,7 +254,7 @@ Needs Xcode Command Line Tools (`swiftc`, `clang`) and Python 3 + Pillow for the
 ```sh
 cd desktop
 npm install          # if Electron didn't download: node node_modules/electron/install.js
-npm test             # prayer-time, location & task-parser tests
+npm test             # prayer-time, location, task-parser & lyrics tests
 npm start            # development
 npm run dist:win     # Windows installer  -> desktop/dist/Nusa-Setup-*.exe
 npm run dist:linux   # AppImage + .deb     -> desktop/dist/
@@ -315,6 +321,15 @@ flyout's media panel, it doesn't expose those controls — most do (Spotify, You
 </details>
 
 <details>
+<summary><b>Why are there no lyrics, or why are they off?</b></summary>
+
+Nusa matches the title, artist and length of what's playing against [LRCLIB](https://lrclib.net). Very new or obscure songs
+may not be there yet. If your version's length differs a lot (a YouTube video with a long intro, say), the Music tab shows
+plain lyrics and the notch stays quiet. If they're slightly early or late, use **− / +** above the lyrics.
+
+</details>
+
+<details>
 <summary><b>Can I import my own theme?</b></summary>
 
 Not anymore — custom imports were dropped in favour of 11 carefully tuned built-in themes that always stay readable.
@@ -334,7 +349,9 @@ It fades out of the way when a screen-recording toolbar or a share bar appears i
 - [x] Windows / macOS / Linux desktop apps
 - [x] Themes — 11 built-in
 - [x] Automatic location for prayer times & weather (Windows & Linux)
+- [x] Synced lyrics in the notch (Windows & Linux)
 - [ ] Automatic location on the native macOS app
+- [ ] Lyrics on the native macOS app
 - [ ] Themes on the native macOS app
 - [ ] Search any city worldwide
 - [ ] Code-signed installers
@@ -351,8 +368,10 @@ Ideas, bug reports and PRs are all welcome!
 ## 📝 Changelog
 
 <details open>
-<summary><b>Latest — location & music</b></summary>
+<summary><b>Latest — lyrics, location & music</b></summary>
 
+- 🎤 **Lyrics** — the line being sung shows in the notch, and the whole song in the Music tab (click a line to jump there).
+  Works with any app Nusa can see playing; turn it off from ⚙ → *Show lyrics*.
 - 📍 **Automatic location** — prayer times, qibla and weather follow where you are (Windows Location, with an IP
   fallback). Pick a city any time from the 📍 chip; *Current location* is the new default.
 - ⏭️ **Snappier music controls** — Next / Previous / Play / Seek respond instantly, even when you click several times
@@ -386,6 +405,7 @@ If Nusa makes your desktop a little nicer:
 - **Prayer times** — [PrayTimes.org](http://praytimes.org) algorithm, Kemenag RI criteria (Fajr 20°, Isha 18°, Asr Shafi'i).
 - **Quran text, translation & reciters** — see [`assets/CREDITS.md`](assets/CREDITS.md).
 - **Weather** — [Open-Meteo](https://open-meteo.com).
+- **Lyrics** — [LRCLIB](https://lrclib.net).
 - **Location names** — [BigDataCloud](https://www.bigdatacloud.com) reverse geocoding · IP fallback by [ipwho.is](https://ipwho.is).
 - **Icons** — hand-drawn SVG, no icon-font dependency.
 - Built & maintained by **[Hiroyki](https://github.com/Hiroyki)** (Quraish Rahmatulloh).
@@ -403,6 +423,7 @@ jadwal sholat (kriteria **Kemenag RI**), kiblat, Al-Qur'an 114 surah + terjemaha
 
 - 📍 **Lokasi otomatis** — jadwal sholat & cuaca langsung ikut kota kamu, nggak perlu setting.
 - 🎵 **Kontrol musik** — Spotify, YouTube, Media Player, apa aja; klik *Next* berkali-kali tetap lancar.
+- 🎤 **Lirik di notch** — jalan bareng lagunya, dari Spotify, Apple Music, YouTube, atau app lain.
 - ✅ **Tugas pakai bahasa sehari-hari** — *"Rapat QC besok jam 9"*, *"minum obat 30 menit lagi"*.
 - 🕌 **Adzan & pengingat** 10 menit sebelum waktu sholat.
 - 🔒 Gratis, tanpa akun, tanpa iklan.

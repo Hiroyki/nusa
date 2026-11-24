@@ -119,10 +119,34 @@ function appName(id = '') {
   return tail.replace(/^.*\./, '') || 'Media';
 }
 
+/** Apple Music di Windows nulis artisnya "Artis — Album" dan albumnya kosong: dipisah lagi. */
+function splitArtist(o) {
+  const cut = !o.album && o.app === 'Apple Music' ? String(o.artist || '').indexOf(' — ') : -1;
+  return cut > 0 ? { ...o, artist: o.artist.slice(0, cut), album: o.artist.slice(cut + 3) } : o;
+}
+
+/**
+ * Buat app yang nggak lapor posisi: dihitung sendiri sejak lagunya ganti (dipakai lirik).
+ * noClock = lagunya udah jalan sebelum Nusa tau, jadi posisinya nggak bisa ditebak.
+ */
+function ownClock() {
+  let c = { key: null };
+  return (s) => {
+    const now = Date.now(), key = s ? `${s.source}|${s.title}|${s.artist}` : '';
+    if (key !== c.key) c = { key, known: c.key !== null, pos: 0, at: now, playing: !!s?.playing };
+    else {
+      if (c.playing) c.pos += (now - c.at) / 1000;
+      c.at = now; c.playing = !!s?.playing;
+    }
+    return { position: c.pos, noClock: !c.known };
+  };
+}
+
 const encode = (script) => Buffer.from(script, 'utf16le').toString('base64');
 
 function startWindows() {
   let lastArt = null;
+  const tick = ownClock();
   const run = () => {
     const ps = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', encode(PS_LOOP)], { windowsHide: true });
     let buf = '';
@@ -134,13 +158,17 @@ function startWindows() {
         const line = buf.slice(0, i).trim();
         buf = buf.slice(i + 1);
         try {
-          const o = JSON.parse(line);
-          if (!o.title) { osState = null; continue; }
+          let o = JSON.parse(line);
+          if (!o.title) { osState = null; tick(null); continue; }
           if ('art' in o) lastArt = o.art || null; // '' = lagu baru tanpa cover
           o.art = lastArt;
           o.app = appName(o.source);
-          const at = o.updated || Date.now();
+          o = splitArtist(o);
+          const own = tick(o);
+          // App yang nggak lapor waktu: LastUpdatedTime-nya tahun 1601, jangan dipakai ngitung posisi
+          const at = o.updated > 1e12 ? o.updated : Date.now();
           osState = { ...o, position: (o.position || 0) + (o.playing ? (Date.now() - at) / 1000 : 0), at: Date.now() };
+          if (!(o.duration > 0) && !(o.position > 0)) Object.assign(osState, own);
         } catch { /* baris rusak, lewati */ }
       }
       publish();
@@ -165,6 +193,7 @@ function startLinux() {
 
 /** Senandung: dipakai kalau sistem nggak ngelaporin apa-apa (dan buat tab Music). */
 function pollSenandung() {
+  const tick = ownClock();
   setInterval(() => {
     http.get('http://127.0.0.1:5560/api/remote/state', { timeout: 1200 }, (res) => {
       let b = '';
@@ -175,7 +204,9 @@ function pollSenandung() {
           const cur = (s.queue || []).find((q) => q.i === s.idx);
           senQueue = cur ? { queue: s.queue, idx: s.idx } : null;
           senandung = cur ? { title: cur.title, artist: cur.artist, art: cur.art ? 'http://127.0.0.1:5560' + cur.art : null,
-            playing: !!s.playing, duration: cur.duration || 0, position: 0, at: Date.now(), source: 'Senandung', noTimeline: true } : null;
+            playing: !!s.playing, duration: cur.duration || 0, at: Date.now(), source: 'Senandung', noTimeline: true } : null;
+          const own = tick(senandung);
+          if (senandung) Object.assign(senandung, own);
         } catch { senandung = null; senQueue = null; }
         publish();
       });
@@ -190,7 +221,7 @@ function publish() {
   const key = JSON.stringify(state && { ...state, at: 0, position: 0, updated: 0 });
   if (key === lastSent && state && lastState) {
     const predicted = (lastState.position || 0) + (lastState.playing ? (Date.now() - lastState.at) / 1000 : 0);
-    if (Math.abs(predicted - (state.position || 0)) < 1.5) return;
+    if (Math.abs(predicted - (state.position || 0)) < 0.5) return; // ketat: lirik jalan ngikutin posisi ini
   } else if (key === lastSent) return;
   lastSent = key;
   lastState = state && { ...state };
@@ -256,4 +287,4 @@ function command(cmd) {
   }
 }
 
-module.exports = { start, command };
+module.exports = { start, command, splitArtist, ownClock };

@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('nusa', {
   platform: process.platform,
   setRect: (r) => ipcRenderer.send('rect', r),
   media: (cmd) => ipcRenderer.send('media-cmd', cmd),
+  lyrics: (on) => ipcRenderer.send('lyrics', !!on),
   volume: (level) => ipcRenderer.send('volume', level),
   mute: (on) => ipcRenderer.send('mute', on),
   openSource: (src) => ipcRenderer.send('open-source', src),
@@ -24,6 +25,6 @@ contextBridge.exposeInMainWorld('nusa', {
   fileShow: (p) => ipcRenderer.send('file-show', p),
   fileDrag: (p) => ipcRenderer.send('file-drag', p),
   on: (channel, fn) => {
-    if (['hover', 'media', 'clip', 'open-panel', 'audio', 'device', 'yield'].includes(channel)) ipcRenderer.on(channel, (_e, v) => fn(v));
+    if (['hover', 'media', 'lyrics', 'clip', 'open-panel', 'audio', 'device', 'yield'].includes(channel)) ipcRenderer.on(channel, (_e, v) => fn(v));
   },
 });
